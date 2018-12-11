@@ -42,8 +42,6 @@ module CrosswordCreator
         let (rS, cS) = coords
         let cu = CultureInfo.CurrentCulture
 
-        let result = Array.zeroCreate wordLen
-
         let getOverlapPoints = 
             let rowOrColumnSeq = 
                 match dir with
@@ -57,9 +55,12 @@ module CrosswordCreator
                 )
         
         // TODO: no two consecutive positions should both have content already in them
+        let res = 
+            getOverlapPoints 
+                |> Seq.filter (fun x -> x = false)
+                |> Seq.toArray
 
-        getOverlapPoints 
-            |> Seq.filter (fun x -> x = false) 
+        res
             |> Seq.length > 1
 
     let validCoords (coords:BoardCoord) (word:Word) (dir:LayoutDir) (board:Board) =
