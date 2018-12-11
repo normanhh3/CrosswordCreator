@@ -52,3 +52,15 @@ let ``isWordPosEmpty returns false for a board with a word already laid out`` ()
     b1.[0,4] <- 'o'
     let isEmpty = isWordPosEmpty (0,0) "World" Horizontal b1
     Assert.False isEmpty
+
+[<Fact>]
+let ``shrink board results in a smaller board`` () =
+    let b1 = getTestBoard 5
+    b1.[3,3] <- 'X'
+
+    let smallBoard = shrinkBoardToSmallest ' ' b1
+    Assert.True ((Array2D.length1 smallBoard) = 1)
+    Assert.True ((Array2D.length2 smallBoard) = 1)
+
+    let (minB, maxB) = getBoardBounds smallBoard
+    Assert.True (minB = 0 && maxB = 0)
