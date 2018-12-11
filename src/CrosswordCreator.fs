@@ -22,6 +22,8 @@ module CrosswordCreator
     type Rank = int
     type IntersectionPoint = BoardCoord * LayoutDir * Rank
 
+    let SpaceChar = '^'
+
     let centerWord (dir:LayoutDir) (word:Word) (board:Board) :BoardCoord =
         let halfOfLen = (board |> Array2D.length1) / 2
         (halfOfLen, halfOfLen - (word.Length / 2))
@@ -38,7 +40,7 @@ module CrosswordCreator
 
     let isWordPosEmpty (coords:BoardCoord) (word:Word) (dir:LayoutDir) (board:Board) :bool =
         let wordLen = word.Length - 1
-        let b = getBoardBounds board 
+        let (minB, maxB) = getBoardBounds board 
         let (rS, cS) = coords
 
         let rowOrColumnSeq = 
@@ -46,15 +48,38 @@ module CrosswordCreator
             | Horizontal -> (seq { for c in cS .. (cS + wordLen) do yield rS, c })
             | Vertical -> (seq { for r in rS .. (rS + wordLen) do yield r, cS })
 
-        // TODO: no two consecutive positions should both have content already in them
+        // TODO: no two consecutive positions should both have non-space characters already in them
         let toUpper c = 
             Char.ToUpper(c, CultureInfo.CurrentCulture)
             
+        let hasLeadingSpace = 
+            match dir, coords with
+            | Vertical, (0, c) -> true
+            | Vertical, (r, c) -> board.[r - 1, c] = ' '
+            | Horizontal, (r, 0) -> true
+            | Horizontal, (r, c) -> board.[r, c - 1] = ' '
+
+        let hasFreeSpace (r:int) (c:int) (dir:LayoutDir) :bool =
+            let btwn = between minB maxB
+            match dir with
+            // For horizontal words, no neighbor (row - 1 and row + 1) overlap unless we are at a valid overlap position
+            | Horizontal -> 
+                btwn (r - 1)
+                && btwn (r + 1)
+                && board.[r - 1, c] = ' ' && board.[r + 1, c] = ' '
+            //For vertical words, no neighbor (column - 1 and column + 1) overlap unless we are at a valid overlap position
+            | Vertical -> 
+                btwn (c - 1)
+                && btwn (c + 1)
+                && board.[r, c - 1] = ' ' && board.[r, c + 1] = ' '
+
         word
             |> Seq.map toUpper // convert the input word into uppercase for comparison
             |> Seq.zip rowOrColumnSeq   // zip together with the auto generated pairs of coordinates mapped to the target position
             |> Seq.map (fun ((r, c), ltr) ->
-                toUpper board.[r,c] = ' ' || (toUpper board.[r,c]) = ltr
+                let boardChar = toUpper board.[r, c]
+                let hasSpace = hasFreeSpace r c dir
+                (boardChar = ' ' && hasSpace && hasLeadingSpace) || boardChar = ltr   
             )
             |> Seq.filter (fun x -> x = false)
             |> Seq.isEmpty
@@ -79,8 +104,9 @@ module CrosswordCreator
 
         let (b,e) = getBoardBounds board
 
-        let getPoints = 
-            seq {
+        let r = new System.Random()
+
+        seq {
             // for every letter in the input word, search the whole array for a fitting spot
             for i = 0 to wl - 1 do
                 for r = b to e - 1 do
@@ -97,8 +123,8 @@ module CrosswordCreator
                                 if validCoords minVerCoord word Vertical board then
                                     yield minVerCoord, Vertical, 0
             }
-        getPoints
-         
+            |> Seq.map (fun (c, dir, weight) -> c, dir, r.Next())
+            |> Seq.sortBy (fun (c, dir, weight) -> weight)
 
     let layoutWord (coords:BoardCoord) (dir:LayoutDir) (word:Word) (board:Board) :Board option =
         match word with
@@ -141,8 +167,6 @@ module CrosswordCreator
             if Seq.isEmpty res then
                 Some(board, wordCount, words)
             else
-                // probably should recurse down through the options available
-                // picking the first available location right now
                 let (coords, dir, rank) = res |> Seq.head
                 let newBoard = board |> layoutWord coords dir word.Word
                 match newBoard with
@@ -155,7 +179,9 @@ module CrosswordCreator
         let arrayDim = (words |> Seq.map (fun x -> x.Word.Length ) |> Seq.max) * 3
         let board = Array2D.create arrayDim arrayDim ' '
         let initialPuzzle = Some(board, 0, [])
-        words |> Seq.fold addWordToPuzzle initialPuzzle
+        words 
+            |> Seq.map (fun r -> {Word = r.Word.Replace(" ", Convert.ToString(SpaceChar)); Hint = r.Hint})
+            |> Seq.fold addWordToPuzzle initialPuzzle
 
     let joinWith (rowDivider:String) (input: String[,])  = 
         let sb = new StringBuilder()
@@ -173,9 +199,9 @@ module CrosswordCreator
 
             let puzzleHeader = "Puzzle:"
             let puzzle = 
-                board |> 
-                Array2D.map (sprintf "%c") |> 
-                joinWith Environment.NewLine
+                board 
+                |> Array2D.map (fun c -> if c = SpaceChar then " " else sprintf "%c" c) 
+                |> joinWith Environment.NewLine
 
             let wordListHeader = sprintf "Word List (%d):" wordCount
 
@@ -183,7 +209,7 @@ module CrosswordCreator
                 words |> 
                 List.groupBy (fun x -> x.Dir) |> 
                 List.sortBy (fun (dir, list) -> dir) |>
-                List.map (fun (dir, lst) -> (dir.ToString() + ": ") :: (lst |> List.map (fun pw -> "  " + pw.Word + ": " + pw.Hint))) |>
+                List.map (fun (dir, lst) -> (dir.ToString() + ": ") :: (lst |> List.map (fun pw -> "   " + pw.Hint))) |>
                 List.concat
             let wordList = String.Join(Environment.NewLine, hintGroups)
 
