@@ -4,6 +4,8 @@ open System
 open Xunit
 open CrosswordCreator
 
+open TestHelpers
+
 [<Fact>]
 let ``between is inclusive`` () =
     Assert.True(between 9 10 9)
@@ -35,15 +37,18 @@ let ``inbounds ensures that coordinates are within the board`` () =
 [<Fact>]
 let ``isWordPosEmpty returns true for a board with no words`` () =
     let b1 = getTestBoard 5
-    Assert.True (isWordPosEmpty (0,0) "Hello" Horizontal b1)
+    let isEmpty = isWordPosEmpty (0,0) "Hello" Horizontal b1
+    Assert.True isEmpty
 
  
 [<Fact>]
 let ``isWordPosEmpty returns false for a board with a word already laid out`` () =
+    //waitForDebugger
     let b1 = getTestBoard 5
     b1.[0,0] <- 'H'
     b1.[0,1] <- 'e'
     b1.[0,2] <- 'l'
     b1.[0,3] <- 'l'
     b1.[0,4] <- 'o'
-    Assert.False (isWordPosEmpty (0,0) "Hello" Horizontal b1)
+    let isEmpty = isWordPosEmpty (0,0) "World" Horizontal b1
+    Assert.False isEmpty

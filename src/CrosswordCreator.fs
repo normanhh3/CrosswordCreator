@@ -37,31 +37,27 @@ module CrosswordCreator
         (between alpha omega r) && (between alpha omega c)
 
     let isWordPosEmpty (coords:BoardCoord) (word:Word) (dir:LayoutDir) (board:Board) :bool =
-        let wordLen = word.Length
+        let wordLen = word.Length - 1
         let b = getBoardBounds board 
         let (rS, cS) = coords
-        let cu = CultureInfo.CurrentCulture
 
-        let getOverlapPoints = 
-            let rowOrColumnSeq = 
-                match dir with
-                | Horizontal -> (seq { for c in cS .. (wordLen - 1) do yield rS,c })
-                | Vertical -> (seq { for r in rS .. (wordLen - 1) do yield r,cS })
+        let rowOrColumnSeq = 
+            match dir with
+            | Horizontal -> (seq { for c in cS .. (cS + wordLen) do yield rS, c })
+            | Vertical -> (seq { for r in rS .. (rS + wordLen) do yield r, cS })
 
-            seq { for i in 0 .. wordLen - 1 do yield i }
-                |> Seq.zip rowOrColumnSeq
-                |> Seq.map (fun ((r, c), i) ->
-                    board.[r,c] = ' ' || Char.ToUpper(board.[r,c], cu) = Char.ToUpper(word.[i],cu)
-                )
-        
         // TODO: no two consecutive positions should both have content already in them
-        let res = 
-            getOverlapPoints 
-                |> Seq.filter (fun x -> x = false)
-                |> Seq.toArray
-
-        res
-            |> Seq.length > 1
+        let toUpper c = 
+            Char.ToUpper(c, CultureInfo.CurrentCulture)
+            
+        word
+            |> Seq.map toUpper // convert the input word into uppercase for comparison
+            |> Seq.zip rowOrColumnSeq   // zip together with the auto generated pairs of coordinates mapped to the target position
+            |> Seq.map (fun ((r, c), ltr) ->
+                toUpper board.[r,c] = ' ' || (toUpper board.[r,c]) = ltr
+            )
+            |> Seq.filter (fun x -> x = false)
+            |> Seq.isEmpty
 
     let validCoords (coords:BoardCoord) (word:Word) (dir:LayoutDir) (board:Board) =
         if not(board |> inbounds coords) then
@@ -187,7 +183,7 @@ module CrosswordCreator
                 words |> 
                 List.groupBy (fun x -> x.Dir) |> 
                 List.sortBy (fun (dir, list) -> dir) |>
-                List.map (fun (dir, lst) -> (dir.ToString() + ": ") :: (lst |> List.map (fun pw -> "  " + pw.Word))) |>
+                List.map (fun (dir, lst) -> (dir.ToString() + ": ") :: (lst |> List.map (fun pw -> "  " + pw.Word + ": " + pw.Hint))) |>
                 List.concat
             let wordList = String.Join(Environment.NewLine, hintGroups)
 
