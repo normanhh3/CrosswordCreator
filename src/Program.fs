@@ -17,24 +17,9 @@ let main argv =
     *)
 
     let inputs = [
-        {Word = "Harebottle"; Hint = "Family name"}; 
-        {Word = "Norman III"; Hint = "Daddy"}; 
-        (*
-        {Word = "Angela"; Hint = "Mommy"}; 
-        {Word = "Norman IV"; Hint = "Oldest"}; 
-        {Word = "Savannah"; Hint = "Daughter"}; 
-        {Word = "Declan"; Hint = "Third"}; 
-        {Word = "Malcolm"; Hint = "NOT 3 but J"}; 
-        {Word = "Lachlan"; Hint = "Omega"};
-        {Word = "Harold"; Hint = "Middle of 2 but not she"};
-        {Word = "Diane"; Hint = "Middle of 2 but not he"};
-        {Word = "Richard"; Hint = "Middle of he and not she"};
-        {Word = "Julian"; Hint = "1st Middle of he who is 3 of he"};
-        {Word = "Blakely"; Hint = "2nd Middle of he who is 3 of he"};
-        {Word = "Troy"; Hint = "Nickname of he not she"};
-        {Word = "Bina"; Hint = "Nickname of she not he"};
-        *)
-        ]
+        {Word = "Word One"; Hint = "Word One"};
+        {Word = "Word Two"; Hint = "Word Two"};
+    ]
 
     let p = createPuzzle inputs
 
