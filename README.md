@@ -1,0 +1,1 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/5jq1h404pqigygtp/branch/master?svg=true)](https://ci.appveyor.com/project/normanhh3/crosswordcreator/branch/master)
