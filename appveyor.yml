@@ -5,7 +5,5 @@ before_build:
 build:
   project: CrosswordCreator.sln
   verbosity: minimal
-test:
-  assemblies:
-    only:
-    - tests/bin/**
+test_script:
+- cmd: dotnet test tests/tests.fsproj
