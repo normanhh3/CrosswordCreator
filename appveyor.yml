@@ -1,0 +1,11 @@
+version: 0.0.{build}.{branch}
+image: Visual Studio 2017
+before_build:
+- cmd: dotnet restore
+build:
+  project: CrosswordCreator.sln
+  verbosity: minimal
+test:
+  assemblies:
+    only:
+    - tests/bin/**
