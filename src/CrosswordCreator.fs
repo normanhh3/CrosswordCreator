@@ -38,10 +38,12 @@ module CrosswordCreator
         let (alpha, omega) = getBoardBounds board
         (between alpha omega r) && (between alpha omega c)
 
+    // This function assumes that the word will fit on the board given the coordinates
     let isWordPosEmpty (coords:BoardCoord) (word:Word) (dir:LayoutDir) (board:Board) :bool =
         let wordLen = word.Length - 1
         let (minB, maxB) = getBoardBounds board 
         let (rS, cS) = coords
+        let btwn = between minB maxB
 
         let rowOrColumnSeq = 
             match dir with
@@ -49,20 +51,32 @@ module CrosswordCreator
             | Vertical -> (seq { for r in rS .. (rS + wordLen) do yield r, cS })
 
         // TODO: no two consecutive positions should both have non-space characters already in them
+
         let toUpper c = 
             Char.ToUpper(c, CultureInfo.CurrentCulture)
 
+        // this implementation doesn't need guards on the match expressions because the 
+        // coordinates have already been boxed to the board dimensions before we get to this code
         let hasLeadingSpace = 
             match dir, coords with
             | Vertical, (0, c) -> true
-            //| Vertical, (r, c) when r = rS + wordLen -> true
             | Vertical, (r, c) -> board.[r - 1, c] = ' '
             | Horizontal, (r, 0) -> true
-            //| Horizontal, (r, c) when c = cS + wordLen -> true
             | Horizontal, (r, c) -> board.[r, c - 1] = ' '
 
-        let hasFreeSpace (r:int) (c:int) (dir:LayoutDir) :bool =
-            let btwn = between minB maxB
+
+        // this implementation doesn't need guards on the match expressions because the 
+        // coordinates have already been boxed to the board dimensions before we get to this code
+        let hasTrailingSpace =
+            let (rL, cL) =
+                match dir with
+                | Vertical when btwn (rS + wordLen + 1) -> (rS + wordLen + 1, cS)
+                | Vertical -> (rS + wordLen, cS)
+                | Horizontal when btwn (cS + wordLen + 1) -> (rS, cS + wordLen + 1)
+                | Horizontal -> (rS, cS + wordLen)
+            board.[rL, cL] = ' '
+
+        let hasFreeSpace (r:int) (c:int) :bool =
             match dir, r, c with
             // For horizontal words, no neighbor (row - 1 and row + 1) overlap unless we are at a valid overlap position
             | Horizontal, r, c when r = minB -> true
@@ -72,23 +86,25 @@ module CrosswordCreator
                 && btwn (r + 1)
                 && board.[r - 1, c] = ' ' && board.[r + 1, c] = ' '
             //For vertical words, no neighbor (column - 1 and column + 1) overlap unless we are at a valid overlap position
-            | Vertical, r, c when r = minB -> true
-            | Vertical, r, c when c = maxB -> true
+            | Vertical, r, c when r = minB || c = maxB -> true
             | Vertical, r, c -> 
                 btwn (c - 1)
                 && btwn (c + 1)
                 && board.[r, c - 1] = ' ' && board.[r, c + 1] = ' '
 
-        word
-            |> Seq.map toUpper // convert the input word into uppercase for comparison
-            |> Seq.zip rowOrColumnSeq   // zip together with the auto generated pairs of coordinates mapped to the target position
-            |> Seq.map (fun ((r, c), ltr) ->
-                let boardChar = toUpper board.[r, c]
-                let hasSpace = hasFreeSpace r c dir
-                (boardChar = ' ' && hasSpace && hasLeadingSpace) || boardChar = ltr   
-            )
-            |> Seq.filter (fun x -> x = false)
-            |> Seq.isEmpty
+        if not (hasLeadingSpace && hasTrailingSpace) then
+            false
+        else
+            word
+                |> Seq.map toUpper // convert the input word into uppercase for comparison
+                |> Seq.zip rowOrColumnSeq   // zip together with the auto generated pairs of coordinates mapped to the target position
+                |> Seq.map (fun ((r, c), ltr) ->
+                    let boardChar = toUpper board.[r, c]
+                    let hasSpace = hasFreeSpace r c
+                    (boardChar = ' ' && hasSpace) || boardChar = ltr   
+                )
+                |> Seq.filter (fun x -> x = false)
+                |> Seq.isEmpty
 
     let validCoords (coords:BoardCoord) (word:Word) (dir:LayoutDir) (board:Board) =
         if not(board |> inbounds coords) then
