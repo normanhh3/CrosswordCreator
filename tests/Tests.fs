@@ -98,7 +98,7 @@ let ``isWordPosEmpty returns true for a board with a word laid along the right a
 
 
 [<Fact>]
-let ``isWordPosEmpty returns true for a board with a word laid along the right and a new word on the bottom`` () =
+let ``isWordPosEmpty returns true for a board with a word laid along the right and an overlapping word on the bottom`` () =
     let b1 = layoutWord (0,4) Vertical "Hello" (getEmptyTestBoard 5)
     match b1 with
     | None -> Assert.True(false,"Word could not be laid out!")
