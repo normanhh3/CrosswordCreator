@@ -79,14 +79,13 @@ module CrosswordCreator
         let hasFreeSpace (r:int) (c:int) :bool =
             match dir, r, c with
             // For horizontal words, no neighbor (row - 1 and row + 1) overlap unless we are at a valid overlap position
-            | Horizontal, r, c when r = minB -> true
-            | Horizontal, r, c when r = maxB -> true
+            | Horizontal, r, c when r = minB || r = maxB -> true
             | Horizontal, r, c -> 
                 btwn (r - 1)
                 && btwn (r + 1)
                 && board.[r - 1, c] = ' ' && board.[r + 1, c] = ' '
             //For vertical words, no neighbor (column - 1 and column + 1) overlap unless we are at a valid overlap position
-            | Vertical, r, c when r = minB || c = maxB -> true
+            | Vertical, r, c when c = minB || c = maxB -> true
             | Vertical, r, c -> 
                 btwn (c - 1)
                 && btwn (c + 1)
@@ -101,7 +100,11 @@ module CrosswordCreator
                 |> Seq.map (fun ((r, c), ltr) ->
                     let boardChar = toUpper board.[r, c]
                     let hasSpace = hasFreeSpace r c
-                    (boardChar = ' ' && hasSpace) || boardChar = ltr   
+                    let res = (boardChar = ' ' && hasSpace) || boardChar = ltr
+                    if res then
+                        true
+                    else 
+                        false
                 )
                 |> Seq.filter (fun x -> x = false)
                 |> Seq.isEmpty
