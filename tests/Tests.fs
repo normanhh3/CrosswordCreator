@@ -6,6 +6,8 @@ open CrosswordCreator
 
 open TestHelpers
 
+// Note: call waitForDebugger from TestHelpers.fs if you want to step into debugging a test
+
 [<Fact>]
 let ``between is inclusive`` () =
     Assert.True(between 9 10 9)
@@ -43,7 +45,6 @@ let ``isWordPosEmpty returns true for a board with no words`` () =
  
 [<Fact>]
 let ``isWordPosEmpty returns false for a board with a word laid along the top`` () =
-    //waitForDebugger
     let b1 = getEmptyTestBoard 5
     b1.[0,0] <- 'H'
     b1.[0,1] <- 'e'
@@ -56,7 +57,6 @@ let ``isWordPosEmpty returns false for a board with a word laid along the top`` 
 
 [<Fact>]
 let ``isWordPosEmpty returns false for a board with a word laid along the bottom`` () =
-    //waitForDebugger
     let b1 = getEmptyTestBoard 5
     b1.[4,0] <- 'H'
     b1.[4,1] <- 'e'
@@ -68,7 +68,6 @@ let ``isWordPosEmpty returns false for a board with a word laid along the bottom
     
 [<Fact>]
 let ``isWordPosEmpty returns false for a board with a word laid along the left`` () =
-    //waitForDebugger
     let b1 = getEmptyTestBoard 5
     b1.[0,0] <- 'H'
     b1.[1,0] <- 'e'
@@ -81,7 +80,6 @@ let ``isWordPosEmpty returns false for a board with a word laid along the left``
     
 [<Fact>]
 let ``isWordPosEmpty returns false for a board with a word laid along the right`` () =
-    //waitForDebugger
     let b1 = layoutWord (0,4) Vertical "Hello" (getEmptyTestBoard 5)
     match b1 with
     | None -> Assert.True(false,"Word could not be laid out!")
@@ -91,7 +89,6 @@ let ``isWordPosEmpty returns false for a board with a word laid along the right`
 
 [<Fact>]
 let ``isWordPosEmpty returns true for a board with a word laid along the right and a new word on the left`` () =
-    //waitForDebugger
     let b1 = layoutWord (0,4) Vertical "Hello" (getEmptyTestBoard 5)
     match b1 with
     | None -> Assert.True(false,"Word could not be laid out!")
@@ -99,6 +96,18 @@ let ``isWordPosEmpty returns true for a board with a word laid along the right a
         let r = isWordPosEmpty (0,0) "World" Vertical b
         Assert.True r
 
+
+[<Fact>]
+let ``isWordPosEmpty returns true for a board with a word laid along the right and a new word on the bottom`` () =
+    let b1 = layoutWord (0,4) Vertical "Hello" (getEmptyTestBoard 5)
+    match b1 with
+    | None -> Assert.True(false,"Word could not be laid out!")
+    | Some(b) ->
+        //waitForDebugger
+        let r = isWordPosEmpty (4,0) "Hello" Horizontal b
+        Assert.True r
+
+(*
 [<Fact>]
 let ``shrink board results in a smaller board`` () =
     //waitForDebugger
@@ -112,3 +121,4 @@ let ``shrink board results in a smaller board`` () =
     let (minB, maxB) = getBoardBounds smallBoard
     Assert.Equal(0, minB)
     Assert.Equal(0, maxB)
+*)

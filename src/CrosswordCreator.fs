@@ -68,13 +68,11 @@ module CrosswordCreator
         // this implementation doesn't need guards on the match expressions because the 
         // coordinates have already been boxed to the board dimensions before we get to this code
         let hasTrailingSpace =
-            let (rL, cL) =
-                match dir with
-                | Vertical when btwn (rS + wordLen + 1) -> (rS + wordLen + 1, cS)
-                | Vertical -> (rS + wordLen, cS)
-                | Horizontal when btwn (cS + wordLen + 1) -> (rS, cS + wordLen + 1)
-                | Horizontal -> (rS, cS + wordLen)
-            board.[rL, cL] = ' '
+            match dir with
+            | Vertical when btwn (rS + wordLen + 1) -> board.[rS + wordLen + 1, cS] = ' '
+            | Vertical -> board.[rS + wordLen, cS] = ' ' || board.[rS + wordLen, cS] = word.[wordLen]
+            | Horizontal when btwn (cS + wordLen + 1) -> board.[rS, cS + wordLen + 1] = ' '
+            | Horizontal -> board.[rS, cS + wordLen] = ' ' || board.[rS, cS + wordLen] = word.[wordLen]
 
         let hasFreeSpace (r:int) (c:int) :bool =
             match dir, r, c with
