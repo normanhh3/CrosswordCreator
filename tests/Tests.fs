@@ -107,6 +107,17 @@ let ``isWordPosEmpty returns true for a board with a word laid along the right a
         let r = isWordPosEmpty (4,0) "Hello" Horizontal b
         Assert.True r
 
+[<Fact>]
+let ``findIntersectingPoints should not return an empty sequence when there are valid intersecting points`` () =
+    let b1 = layoutWord (3,4) Vertical "Hello" (getEmptyTestBoard 10)
+    match b1 with
+    | None -> Assert.True(false,"Word could not be laid out!")
+    | Some(b) ->
+        //waitForDebugger
+        let points = findIntersectingPoints b "World"
+        Assert.False (Seq.isEmpty points)
+        Assert.True (Seq.length points = 3)
+
 (*
 [<Fact>]
 let ``shrink board results in a smaller board`` () =

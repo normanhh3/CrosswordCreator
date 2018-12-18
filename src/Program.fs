@@ -36,7 +36,7 @@ let main argv =
     //    {Word = "Word Two"; Hint = "Word Two"};
     //])
 
-    let filePath = getBinDir +/ "../../../../puzzles/Puzzle.json"
+    let filePath = getBinDir +/ "../../../../puzzles/Sentence.json"
     let inputs = getInputFromJson filePath
 
     match inputs with

@@ -125,7 +125,7 @@ module CrosswordCreator
 
         let wl = word.Length
 
-        let (b,e) = getBoardBounds board
+        let (b, e) = getBoardBounds board
 
         let r = new System.Random()
 
@@ -135,19 +135,19 @@ module CrosswordCreator
                 for r = b to e - 1 do
                     for c = b to e - 1 do
                         // found intersecting point
-                        if board.[r,c] = word.[i] then 
+                        if board.[r, c] = word.[i] then 
                             // is it valid for a horizontal layout?
-                            let minHorCoord = (r, c - i)
+                            let minHorCoord = BoardCoord(r, c - i)
                             if validCoords minHorCoord word Horizontal board then
-                                yield minHorCoord, Horizontal, 0
+                                yield minHorCoord, Horizontal
                             else
                                 // is it valid for a vertical layout?
-                                let minVerCoord = (r - i, c)
+                                let minVerCoord = BoardCoord(r - i, c)
                                 if validCoords minVerCoord word Vertical board then
-                                    yield minVerCoord, Vertical, 0
+                                    yield minVerCoord, Vertical
             }
-            |> Seq.map (fun (c, dir, weight) -> c, dir, r.Next())
-            |> Seq.sortBy (fun (c, dir, weight) -> weight)
+            |> Seq.map (fun (c, dir) -> c, dir, r.Next())
+            |> Seq.sortBy (fun (coord, dir, weight) -> weight)
 
     let layoutWord (coords:BoardCoord) (dir:LayoutDir) (word:Word) (board:Board) :Board option =
         match word with
@@ -229,11 +229,17 @@ module CrosswordCreator
             let wordListHeader = sprintf "Word List (%d):" wordCount
 
             let hintGroups = 
-                words |> 
-                List.groupBy (fun x -> x.Dir) |> 
-                List.sortBy (fun (dir, list) -> dir) |>
-                List.map (fun (dir, lst) -> (dir.ToString() + ": ") :: (lst |> List.map (fun pw -> "   " + pw.Hint))) |>
-                List.concat
+                words 
+                |> List.groupBy (fun x -> x.Dir) 
+                |> List.sortBy (fun (dir, list) -> dir) 
+                |> List.map (fun (dir, lst) -> 
+                    (dir.ToString() + ": ") :: 
+                    (lst 
+                        |> List.sortBy (fun pw -> pw.Coord) 
+                        |> List.map (fun pw -> 
+                            let r,c = pw.Coord
+                            sprintf "(%d,%d)   %s" r c pw.Hint)))
+                |> List.concat
             let wordList = String.Join(Environment.NewLine, hintGroups)
 
             let output = String.Join(nl + nl, [puzzleHeader; puzzle; wordListHeader; wordList])
