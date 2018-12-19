@@ -5,6 +5,7 @@ open Xunit
 open CrosswordCreator
 
 open TestHelpers
+open Microsoft.VisualStudio.TestPlatform.TestHost
 
 // Note: call waitForDebugger from TestHelpers.fs if you want to step into debugging a test
 
@@ -116,7 +117,34 @@ let ``findIntersectingPoints should not return an empty sequence when there are 
         //waitForDebugger
         let points = findIntersectingPoints b "World"
         Assert.False (Seq.isEmpty points)
-        Assert.True (Seq.length points = 3)
+        Assert.Equal(3, (Seq.length points))
+
+open Program
+
+[<Fact>]
+let ``layout of a sentence of words should include all words`` () =
+    //waitForDebugger
+    let wl = getInputFromJsonS """
+        [
+            {"Word": "Hello", "Hint": "1"}, 
+            {"Word": "Norman", "Hint": "2"}, 
+            {"Word": "What", "Hint": "3"}, 
+            {"Word": "Road", "Hint": "4"}, 
+            {"Word": "Shall", "Hint": "5"}, 
+            {"Word": "We", "Hint": "6"}, 
+            {"Word": "Take?", "Hint": "7"}
+        ]
+    """
+    match createPuzzle wl with
+    | None -> Assert.True(false, "Failed to layout the puzzle as expected!")
+    | Some(board, wordCount, words) -> 
+        let puzzleWords = words |> Seq.map (fun r -> r.Word) |> Set.ofSeq
+        let expectedWords = wl |> Seq.map (fun r -> r.Word) |> Set.ofSeq
+        let diff = Set.difference expectedWords puzzleWords
+        Assert.Empty diff
+
+        Assert.Equal(7, wordCount)
+
 
 (*
 [<Fact>]

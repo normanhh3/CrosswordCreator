@@ -3,5 +3,9 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"FSharp.fsacRuntime": "netcore",
+		"editor.detectIndentation": false
+	}
 }

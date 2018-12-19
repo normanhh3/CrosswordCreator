@@ -24,6 +24,9 @@ module CrosswordCreator
 
     let SpaceChar = '^'
 
+    let toUpper c = 
+        Char.ToUpper(c, CultureInfo.CurrentCulture)
+
     let centerWord (dir:LayoutDir) (word:Word) (board:Board) :BoardCoord =
         let halfOfLen = (board |> Array2D.length1) / 2
         (halfOfLen, halfOfLen - (word.Length / 2))
@@ -52,9 +55,6 @@ module CrosswordCreator
 
         // TODO: no two consecutive positions should both have non-space characters already in them
 
-        let toUpper c = 
-            Char.ToUpper(c, CultureInfo.CurrentCulture)
-
         // this implementation doesn't need guards on the match expressions because the 
         // coordinates have already been boxed to the board dimensions before we get to this code
         let hasLeadingSpace = 
@@ -64,15 +64,14 @@ module CrosswordCreator
             | Horizontal, (r, 0) -> true
             | Horizontal, (r, c) -> board.[r, c - 1] = ' '
 
-
         // this implementation doesn't need guards on the match expressions because the 
         // coordinates have already been boxed to the board dimensions before we get to this code
         let hasTrailingSpace =
             match dir with
             | Vertical when btwn (rS + wordLen + 1) -> board.[rS + wordLen + 1, cS] = ' '
-            | Vertical -> board.[rS + wordLen, cS] = ' ' || board.[rS + wordLen, cS] = word.[wordLen]
+            | Vertical -> board.[rS + wordLen, cS] = ' ' || toUpper board.[rS + wordLen, cS] = toUpper word.[wordLen]
             | Horizontal when btwn (cS + wordLen + 1) -> board.[rS, cS + wordLen + 1] = ' '
-            | Horizontal -> board.[rS, cS + wordLen] = ' ' || board.[rS, cS + wordLen] = word.[wordLen]
+            | Horizontal -> board.[rS, cS + wordLen] = ' ' || toUpper board.[rS, cS + wordLen] = toUpper word.[wordLen]
 
         let hasFreeSpace (r:int) (c:int) :bool =
             match dir, r, c with
@@ -111,17 +110,17 @@ module CrosswordCreator
         if not(board |> inbounds coords) then
             false
         else
-            let wl = word.Length
-            match coords, wl, dir with
-            | (r, c), _, Vertical -> 
+            let wl = word.Length - 1
+            match coords, dir with
+            | (r, c), Vertical -> 
                 board |> inbounds (r + wl, c) 
                 && isWordPosEmpty coords word dir board
-            | (r, c), _, Horizontal ->
+            | (r, c), Horizontal ->
                 board |> inbounds (r, c + wl) 
                 && isWordPosEmpty coords word dir board
 
     let findIntersectingPoints (board:Board) (word:Word) =
-        // return a rank ordered list of valid candidate intersection points
+        // return a list of valid candidate intersection points
 
         let wl = word.Length
 
@@ -135,7 +134,7 @@ module CrosswordCreator
                 for r = b to e - 1 do
                     for c = b to e - 1 do
                         // found intersecting point
-                        if board.[r, c] = word.[i] then 
+                        if toUpper board.[r, c] = toUpper word.[i] then 
                             // is it valid for a horizontal layout?
                             let minHorCoord = BoardCoord(r, c - i)
                             if validCoords minHorCoord word Horizontal board then
@@ -146,29 +145,29 @@ module CrosswordCreator
                                 if validCoords minVerCoord word Vertical board then
                                     yield minVerCoord, Vertical
             }
-            |> Seq.map (fun (c, dir) -> c, dir, r.Next())
-            |> Seq.sortBy (fun (coord, dir, weight) -> weight)
 
-    let layoutWord (coords:BoardCoord) (dir:LayoutDir) (word:Word) (board:Board) :Board option =
+    let private layoutWordInternal (coords:BoardCoord) (dir:LayoutDir) (word:Word) (board:Board) :Board =
+        let wordLen = word.Length - 1
+        let newBoard = board |> Array2D.copy
+        
+        match coords, dir with
+        | ((r, c), Horizontal) ->
+            for c1 = c to c + wordLen do
+                newBoard.[r, c1] <- word.[c1 - c]
+            newBoard
+        | ((r, c), Vertical) ->
+            for r1 = r to r + wordLen do
+                newBoard.[r1, c] <- word.[r1 - r]
+            newBoard
+
+    let public layoutWord (coords:BoardCoord) (dir:LayoutDir) (word:Word) (board:Board) :Board option =
         match word with
         | null -> None    // can't layout a null word!
+        | "" -> None    // can't layout an empty string
+        | word when word.Length < 2 -> None // can't be only a single character long
+        | word when not (validCoords coords word dir board) -> None // can't be placed somewhere illegal
         | word ->
-            let wordLen = word.Length
-            if wordLen < 2 && not (board |> validCoords coords word dir)
-                // too short or invalid coordinates - can't place it!
-                then None
-                else
-                    let newBoard = board |> Array2D.copy
-                    
-                    match coords, dir with
-                    | ((r, c), Horizontal) ->
-                        for c1 = c to c + wordLen - 1 do
-                            newBoard.[r, c1] <- word.[c1 - c]
-                        Some(newBoard)
-                    | ((r, c), Vertical) ->
-                        for r1 = r to r + wordLen - 1 do
-                            newBoard.[r1, c] <- word.[r1 - r]
-                        Some(newBoard)
+            Some(layoutWordInternal coords dir word board)
 
     let addWordToPuzzle (puzzle:Puzzle option) (word:InputWord) :Puzzle option =
         match puzzle with
@@ -176,27 +175,21 @@ module CrosswordCreator
         | Some(board, wordCount, words) when wordCount = 0 -> 
             // add initial word to crossword puzzle
             let coords = board |> centerWord Horizontal word.Word // get the coordinates for a center placement of the word
-            let newBoard = board |> layoutWord coords Horizontal word.Word
-            match newBoard with
-            | Some b -> 
-                let r = [{Word = word.Word; Hint = word.Hint; Coord = coords; Dir = Horizontal}]
-                Some((b, 1, r))
-            | None -> None
+            let newBoard = board |> layoutWordInternal coords Horizontal word.Word
+            let r = [{Word = word.Word; Hint = word.Hint; Coord = coords; Dir = Horizontal}]
+            Some((newBoard, 1, r))
         | Some(board, wordCount, words) when wordCount > 0 ->
             
-            // find ranked intersection points for new word against existing words
+            // find intersection points for new word against existing words
             let res = findIntersectingPoints board word.Word
 
             if Seq.isEmpty res then
                 Some(board, wordCount, words)
             else
-                let (coords, dir, rank) = res |> Seq.head
-                let newBoard = board |> layoutWord coords dir word.Word
-                match newBoard with
-                | Some(b) -> 
-                    let wordList = {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir} :: words
-                    Some(b, wordCount + 1, wordList)
-                | None -> None
+                let (coords, dir) = res |> Seq.head
+                let newBoard = board |> layoutWordInternal coords dir word.Word
+                let wordList = {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir} :: words
+                Some(newBoard, wordCount + 1, wordList)
 
     let createPuzzle (words:InputWords) :Puzzle option =
         let arrayDim = (words |> Seq.map (fun x -> x.Word.Length ) |> Seq.max) * 3

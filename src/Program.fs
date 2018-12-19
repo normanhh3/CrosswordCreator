@@ -6,15 +6,18 @@ open System.IO
 
 type PuzzleJson = JsonProvider<""" [{ "Word": "California", "Hint": "Biggest west coast state"}] """>
     
+let getInputFromJsonS (json:string) :InputWord list =
+    let jsonS = json
+    (PuzzleJson.Parse jsonS)
+            |> Array.map (fun (x) -> {Word = x.Word; Hint = x.Hint})
+            |> Array.toList
+
 let getInputFromJson (file:string) :InputWord list option =    
     if not(File.Exists file) then
         None
     else
         let jsonS = File.ReadAllText file
-        Some(
-            (PuzzleJson.Parse jsonS)
-            |> Array.map (fun (x) -> {Word = x.Word; Hint = x.Hint})
-            |> Array.toList)
+        Some(getInputFromJsonS jsonS)
 
 let (+/) path1 path2 = Path.Combine(path1, path2)
 
