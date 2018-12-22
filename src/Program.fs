@@ -34,12 +34,7 @@ let getBinDir =
 [<EntryPoint>]
 let main argv =    
 
-    //let inputs = Some([
-    //    {Word = "Word One"; Hint = "Word One"};
-    //    {Word = "Word Two"; Hint = "Word Two"};
-    //])
-
-    let filePath = getBinDir +/ "../../../../puzzles/Sentence.json"
+    let filePath = getBinDir +/ "../../../../puzzles/Puzzle.json"
     let inputs = getInputFromJson filePath
 
     match inputs with

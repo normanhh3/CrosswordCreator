@@ -135,16 +135,17 @@ let ``createPuzzles returns only puzzles with all elements laid out`` () =
             {"Word": "Road", "Hint": "A transportation path"}, 
             {"Word": "Shall", "Hint": "Shall?"}, 
             {"Word": "We", "Hint": "Plural of people"}, 
-            {"Word": "Take?", "Hint": "Posession"}
+            {"Word": "Drive?", "Hint": "Mode of transport"}
         ]
     """
     let basePuzzle = createEmptyPuzzle wl
     let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
     match resultingPuzzles with
     | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
-    | head :: _ -> 
-        printfn "Found %d puzzles that were valid!" resultingPuzzles.Length
-        printfn "First Puzzle:\r\n%s" (puzzleToString head)
+    | _ -> 
+        printfn "Wahoo! Found at least 1 puzzle that was valid (and %d more)!" resultingPuzzles.Length
+        for p in resultingPuzzles do
+            printfn "%s" (puzzleToString p)
         Assert.True(resultingPuzzles.Length > 1)
 
 (*

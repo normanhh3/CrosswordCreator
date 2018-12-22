@@ -234,9 +234,15 @@ module CrosswordCreator
             let output = String.Join(nl + nl, [puzzleHeader; puzzle; wordListHeader; wordList])
             String.Join(Environment.NewLine, output)
 
-
-    let shrinkBoardToSmallest (emptyChar:Char) (board:Board) :Board = board
-    //    let (board, wc, wors) = puzzle
+    let shrinkPuzzleToSmallest (emptyChar:Char) (puzzle:Puzzle) :Puzzle = puzzle
+        // TODO: Find the number of rows before the content to be removed
+        // TODO: Find the number of rows after the content to be removed
+        // TODO: Find the number of columns before the content to be removed
+        // TODO: Find the number of columns after the content to be removed
+        // TODO: Rewrite all of the PuzzleWord indices so that the words are
+        // still referenced at the correct locations
+        
+        // Use Array2D.init
 
     let rec addWordsToPuzzle (words:InputWords) (puzzle:Puzzle) :seq<Puzzle> =
         seq {
@@ -255,4 +261,6 @@ module CrosswordCreator
         let res = addWordsToPuzzle spaceFixedWords puzzle
         res 
         |> Seq.where (fun (board, wordCount, puzzleWords) -> wordCount = words.Length)
-        |> Seq.map (fun (board, wordCount, puzzleWords) -> (board, wordCount, puzzleWords |> List.rev))
+        |> Seq.map (fun (board, wordCount, puzzleWords) -> 
+                shrinkPuzzleToSmallest SpaceChar (board, wordCount, puzzleWords |> List.rev)
+            )
