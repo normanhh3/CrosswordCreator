@@ -234,6 +234,11 @@ module CrosswordCreator
             let output = String.Join(nl + nl, [puzzleHeader; puzzle; wordListHeader; wordList])
             String.Join(Environment.NewLine, output)
 
+    let invertPuzzle (puzzle:Puzzle) :Puzzle =
+        // TODO: Implement inversion of the puzzle board so that it can actually be solved
+        // See this: https://www.fileformat.info/info/unicode/char/25a0/index.htm
+        puzzle
+
     let shrinkPuzzleToSmallest (emptyChar:Char) (puzzle:Puzzle) :Puzzle = puzzle
         // TODO: Find the number of rows before the content to be removed
         // TODO: Find the number of rows after the content to be removed
@@ -264,3 +269,4 @@ module CrosswordCreator
         |> Seq.map (fun (board, wordCount, puzzleWords) -> 
                 shrinkPuzzleToSmallest SpaceChar (board, wordCount, puzzleWords |> List.rev)
             )
+        |> Seq.map invertPuzzle
