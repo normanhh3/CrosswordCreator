@@ -235,9 +235,14 @@ module CrosswordCreator
             String.Join(Environment.NewLine, output)
 
     let invertPuzzle (puzzle:Puzzle) :Puzzle =
-        // TODO: Implement inversion of the puzzle board so that it can actually be solved
         // See this: https://www.fileformat.info/info/unicode/char/25a0/index.htm
-        puzzle
+        let blockChar = '\u25a0'
+
+        match puzzle with
+        | (board, wordCount, words) ->
+            let inverseBoard = board |> Array2D.map (fun ltr -> 
+                if ltr = ' ' then blockChar else ' ')
+            (inverseBoard, wordCount, words)
 
     let shrinkPuzzleToSmallest (emptyChar:Char) (puzzle:Puzzle) :Puzzle = puzzle
         // TODO: Find the number of rows before the content to be removed
