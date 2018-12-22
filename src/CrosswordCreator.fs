@@ -169,35 +169,32 @@ module CrosswordCreator
         | word ->
             Some(layoutWordInternal coords dir word board)
 
-    let addWordToPuzzle (puzzle:Puzzle option) (word:InputWord) :Puzzle option =
-        match puzzle with
-        | None -> None
-        | Some(board, wordCount, words) when wordCount = 0 -> 
-            // add initial word to crossword puzzle
-            let coords = board |> centerWord Horizontal word.Word // get the coordinates for a center placement of the word
-            let newBoard = board |> layoutWordInternal coords Horizontal word.Word
-            let r = [{Word = word.Word; Hint = word.Hint; Coord = coords; Dir = Horizontal}]
-            Some((newBoard, 1, r))
-        | Some(board, wordCount, words) when wordCount > 0 ->
-            
-            // find intersection points for new word against existing words
-            let res = findIntersectingPoints board word.Word
+    let addWordToPuzzle (puzzle:Puzzle) (word:InputWord) :seq<Puzzle> =
+        seq {
+            match puzzle with
+            | (board, wordCount, wordList) when wordCount = 0 -> 
+                // add initial word to crossword puzzle
+                let coords = board |> centerWord Horizontal word.Word // get the coordinates for a center placement of the word
+                let newBoard = board |> layoutWordInternal coords Horizontal word.Word
+                let r = [{Word = word.Word; Hint = word.Hint; Coord = coords; Dir = Horizontal}]
+                yield (newBoard, 1, r)
+            | (board, wordCount, words) when wordCount > 0 ->
+                let res = findIntersectingPoints board word.Word
 
-            if Seq.isEmpty res then
-                Some(board, wordCount, words)
-            else
-                let (coords, dir) = res |> Seq.head
-                let newBoard = board |> layoutWordInternal coords dir word.Word
-                let wordList = {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir} :: words
-                Some(newBoard, wordCount + 1, wordList)
+                for (coords, dir) in res do
+                    let newBoard = board |> layoutWordInternal coords dir word.Word
+                    let wordList = {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir} :: words
+                    yield (newBoard, wordCount + 1, wordList)
+        }
 
-    let createPuzzle (words:InputWords) :Puzzle option =
+    let createEmptyPuzzle (words:InputWords) :Puzzle =
         let arrayDim = (words |> Seq.map (fun x -> x.Word.Length ) |> Seq.max) * 3
         let board = Array2D.create arrayDim arrayDim ' '
-        let initialPuzzle = Some(board, 0, [])
-        words 
-            |> Seq.map (fun r -> {Word = r.Word.Replace(" ", Convert.ToString(SpaceChar)); Hint = r.Hint})
-            |> Seq.fold addWordToPuzzle initialPuzzle
+        (board, 0, [])
+
+
+    let fixSpacesInWords (words:InputWords) =
+        words |> Seq.map (fun r -> {Word = r.Word.Replace(" ", Convert.ToString(SpaceChar)); Hint = r.Hint})
 
     let joinWith (rowDivider:String) (input: String[,])  = 
         let sb = new StringBuilder()
@@ -207,10 +204,9 @@ module CrosswordCreator
             sb.Append(rowDivider) |> ignore
         sb.ToString()
 
-    let puzzleToString (puzzle:Puzzle option) :string =
+    let puzzleToString (puzzle:Puzzle) :string =
         match puzzle with
-        | None -> "No puzzle to draw!"
-        | Some(board, wordCount, words) ->
+        | (board, wordCount, words) ->
             let nl = Environment.NewLine
 
             let puzzleHeader = "Puzzle:"
@@ -241,3 +237,22 @@ module CrosswordCreator
 
     let shrinkBoardToSmallest (emptyChar:Char) (board:Board) :Board = board
     //    let (board, wc, wors) = puzzle
+
+    let rec addWordsToPuzzle (words:InputWords) (puzzle:Puzzle) :seq<Puzzle> =
+        seq {
+            match words with
+            | [] -> yield puzzle
+            | head :: tail -> 
+                for newPuzzle in addWordToPuzzle puzzle head do
+                    yield! addWordsToPuzzle tail newPuzzle
+        }
+
+    // this method is NOT recursive
+    // it takes the master list of words and starting puzzle
+    // then returns a sequence of puzzles that meet minimum criteria
+    let createPuzzles (words:InputWords) (puzzle:Puzzle) :seq<Puzzle> =
+        let spaceFixedWords = fixSpacesInWords words |> Seq.toList
+        let res = addWordsToPuzzle spaceFixedWords puzzle
+        res 
+        |> Seq.where (fun (board, wordCount, puzzleWords) -> wordCount = words.Length)
+        |> Seq.map (fun (board, wordCount, puzzleWords) -> (board, wordCount, puzzleWords |> List.rev))

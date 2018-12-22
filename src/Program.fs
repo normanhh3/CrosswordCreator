@@ -43,10 +43,16 @@ let main argv =
     let inputs = getInputFromJson filePath
 
     match inputs with
-    | Some(wordlist) -> 
-        let p = createPuzzle wordlist
-        printfn "%s" (puzzleToString p) 
-        0
+    | Some(wordList) -> 
+        let basePuzzle = createEmptyPuzzle wordList
+        let finalPuzzle = createPuzzles wordList basePuzzle |> Seq.tryHead
+        match finalPuzzle with
+        | None ->
+            printfn "Oops! Unable to create a crossword puzzle with the given inputs!"
+            2
+        | Some(puzzle) ->
+            printfn "%s" (puzzleToString puzzle) 
+            0
     | None -> 
         printfn "Input file: %s does not exist!" filePath
         1

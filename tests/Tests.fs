@@ -119,32 +119,33 @@ let ``findIntersectingPoints should not return an empty sequence when there are 
         Assert.False (Seq.isEmpty points)
         Assert.Equal(3, (Seq.length points))
 
+// TODO: findIntersectingPoints needs to be more thoroughly tested to ensure that it is returning appropriate matches
+
 open Program
+open CrosswordCreator
 
 [<Fact>]
-let ``layout of a sentence of words should include all words`` () =
+let ``createPuzzles returns only puzzles with all elements laid out`` () =
     //waitForDebugger
     let wl = getInputFromJsonS """
         [
-            {"Word": "Hello", "Hint": "1"}, 
-            {"Word": "Norman", "Hint": "2"}, 
-            {"Word": "What", "Hint": "3"}, 
-            {"Word": "Road", "Hint": "4"}, 
-            {"Word": "Shall", "Hint": "5"}, 
-            {"Word": "We", "Hint": "6"}, 
-            {"Word": "Take?", "Hint": "7"}
+            {"Word": "Hello", "Hint": "A greeting"}, 
+            {"Word": "Norman", "Hint": "A name"}, 
+            {"Word": "What", "Hint": "A question about a noun"}, 
+            {"Word": "Road", "Hint": "A transportation path"}, 
+            {"Word": "Shall", "Hint": "Shall?"}, 
+            {"Word": "We", "Hint": "Plural of people"}, 
+            {"Word": "Take?", "Hint": "Posession"}
         ]
     """
-    match createPuzzle wl with
-    | None -> Assert.True(false, "Failed to layout the puzzle as expected!")
-    | Some(board, wordCount, words) -> 
-        let puzzleWords = words |> Seq.map (fun r -> r.Word) |> Set.ofSeq
-        let expectedWords = wl |> Seq.map (fun r -> r.Word) |> Set.ofSeq
-        let diff = Set.difference expectedWords puzzleWords
-        Assert.Empty diff
-
-        Assert.Equal(7, wordCount)
-
+    let basePuzzle = createEmptyPuzzle wl
+    let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
+    match resultingPuzzles with
+    | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
+    | head :: _ -> 
+        printfn "Found %d puzzles that were valid!" resultingPuzzles.Length
+        printfn "First Puzzle:\r\n%s" (puzzleToString head)
+        Assert.True(resultingPuzzles.Length > 1)
 
 (*
 [<Fact>]
