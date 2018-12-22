@@ -212,7 +212,8 @@ module CrosswordCreator
             let puzzleHeader = "Puzzle:"
             let puzzle = 
                 board 
-                |> Array2D.map (fun c -> if c = SpaceChar then " " else sprintf "%c" c) 
+                |> Array2D.map (fun c -> 
+                    if c = SpaceChar then " " else sprintf "%c" c) 
                 |> joinWith Environment.NewLine
 
             let wordListHeader = sprintf "Word List (%d):" wordCount
@@ -241,7 +242,7 @@ module CrosswordCreator
         match puzzle with
         | (board, wordCount, words) ->
             let inverseBoard = board |> Array2D.map (fun ltr -> 
-                if ltr = ' ' then blockChar else ' ')
+                if ltr = ' ' then blockChar else '\u2610')
             (inverseBoard, wordCount, words)
 
     let shrinkPuzzleToSmallest (emptyChar:Char) (puzzle:Puzzle) :Puzzle = puzzle
