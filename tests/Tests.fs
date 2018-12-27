@@ -16,7 +16,7 @@ let ``between is inclusive`` () =
     Assert.False(between 0 10 11)
 
 let getEmptyTestBoard size =
-    Array2D.create size size ' '
+    Array2D.create size size EmptyChar
 
 [<Fact>]
 let ``getBoardBounds returns 2d square array starting and ending indices`` () =
@@ -148,18 +148,29 @@ let ``createPuzzles returns only puzzles with all elements laid out`` () =
             printfn "%s" (puzzleToString p)
         Assert.True(resultingPuzzles.Length > 1)
 
-(*
+
 [<Fact>]
 let ``shrink board results in a smaller board`` () =
     //waitForDebugger
     let b1 = getEmptyTestBoard 5
-    b1.[3,3] <- 'X'
+    b1.[3,2] <- 'W'
+    b1.[3,3] <- 'e'
+    let inputPuzzle = (b1, 1, [ {Word="We"; Hint="We"; Coord=(3,2); Dir=Horizontal} ])
 
-    let smallBoard = shrinkBoardToSmallest ' ' b1
-    Assert.Equal(1,(Array2D.length1 smallBoard))
-    Assert.Equal(1, (Array2D.length2 smallBoard))
+    let smallPuzzle = shrinkPuzzleToSmallest inputPuzzle
+    match smallPuzzle with
+    | (smallBoard, wordCount, wordList) ->
 
-    let (minB, maxB) = getBoardBounds smallBoard
-    Assert.Equal(0, minB)
-    Assert.Equal(0, maxB)
-*)
+        Assert.Equal(2, (Array2D.length1 smallBoard))
+        Assert.Equal(2, (Array2D.length2 smallBoard))
+
+        let (minB, maxB) = getBoardBounds smallBoard
+        Assert.Equal(0, minB)
+        Assert.Equal(1, maxB)
+    |> ignore
+
+[<Fact>]
+let ``reverse sequence expressions work`` () =
+    Assert.Equal(3, seq {7 .. 10 .. 7} |> Seq.length)
+    Assert.Equal(10, seq {10 .. 7} |> Seq.head)
+    Assert.Equal(7, seq {10 .. 7} |> Seq.last)

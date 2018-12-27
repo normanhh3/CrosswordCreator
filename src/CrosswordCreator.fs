@@ -23,6 +23,8 @@ module CrosswordCreator
     type IntersectionPoint = BoardCoord * LayoutDir * Rank
 
     let SpaceChar = '^'
+    let EmptyChar = ' '
+    let BoxChar = '\u2610'
 
     let toUpper c = 
         Char.ToUpper(c, CultureInfo.CurrentCulture)
@@ -60,18 +62,18 @@ module CrosswordCreator
         let hasLeadingSpace = 
             match dir, coords with
             | Vertical, (0, c) -> true
-            | Vertical, (r, c) -> board.[r - 1, c] = ' '
+            | Vertical, (r, c) -> board.[r - 1, c] = EmptyChar
             | Horizontal, (r, 0) -> true
-            | Horizontal, (r, c) -> board.[r, c - 1] = ' '
+            | Horizontal, (r, c) -> board.[r, c - 1] = EmptyChar
 
         // this implementation doesn't need guards on the match expressions because the 
         // coordinates have already been boxed to the board dimensions before we get to this code
         let hasTrailingSpace =
             match dir with
-            | Vertical when btwn (rS + wordLen + 1) -> board.[rS + wordLen + 1, cS] = ' '
-            | Vertical -> board.[rS + wordLen, cS] = ' ' || toUpper board.[rS + wordLen, cS] = toUpper word.[wordLen]
-            | Horizontal when btwn (cS + wordLen + 1) -> board.[rS, cS + wordLen + 1] = ' '
-            | Horizontal -> board.[rS, cS + wordLen] = ' ' || toUpper board.[rS, cS + wordLen] = toUpper word.[wordLen]
+            | Vertical when btwn (rS + wordLen + 1) -> board.[rS + wordLen + 1, cS] = EmptyChar
+            | Vertical -> board.[rS + wordLen, cS] = EmptyChar || toUpper board.[rS + wordLen, cS] = toUpper word.[wordLen]
+            | Horizontal when btwn (cS + wordLen + 1) -> board.[rS, cS + wordLen + 1] = EmptyChar
+            | Horizontal -> board.[rS, cS + wordLen] = EmptyChar || toUpper board.[rS, cS + wordLen] = toUpper word.[wordLen]
 
         let hasFreeSpace (r:int) (c:int) :bool =
             match dir, r, c with
@@ -80,13 +82,13 @@ module CrosswordCreator
             | Horizontal, r, c -> 
                 btwn (r - 1)
                 && btwn (r + 1)
-                && board.[r - 1, c] = ' ' && board.[r + 1, c] = ' '
+                && board.[r - 1, c] = EmptyChar && board.[r + 1, c] = EmptyChar
             //For vertical words, no neighbor (column - 1 and column + 1) overlap unless we are at a valid overlap position
             | Vertical, r, c when c = minB || c = maxB -> true
             | Vertical, r, c -> 
                 btwn (c - 1)
                 && btwn (c + 1)
-                && board.[r, c - 1] = ' ' && board.[r, c + 1] = ' '
+                && board.[r, c - 1] = EmptyChar && board.[r, c + 1] = EmptyChar
 
         if not (hasLeadingSpace && hasTrailingSpace) then
             false
@@ -97,7 +99,7 @@ module CrosswordCreator
                 |> Seq.map (fun ((r, c), ltr) ->
                     let boardChar = toUpper board.[r, c]
                     let hasSpace = hasFreeSpace r c
-                    let res = (boardChar = ' ' && hasSpace) || boardChar = ltr
+                    let res = (boardChar = EmptyChar && hasSpace) || boardChar = ltr
                     if res then
                         true
                     else 
@@ -189,9 +191,8 @@ module CrosswordCreator
 
     let createEmptyPuzzle (words:InputWords) :Puzzle =
         let arrayDim = (words |> Seq.map (fun x -> x.Word.Length ) |> Seq.max) * 3
-        let board = Array2D.create arrayDim arrayDim ' '
+        let board = Array2D.create arrayDim arrayDim EmptyChar
         (board, 0, [])
-
 
     let fixSpacesInWords (words:InputWords) =
         words |> Seq.map (fun r -> {Word = r.Word.Replace(" ", Convert.ToString(SpaceChar)); Hint = r.Hint})
@@ -223,12 +224,12 @@ module CrosswordCreator
                 |> List.groupBy (fun x -> x.Dir) 
                 |> List.sortBy (fun (dir, list) -> dir) 
                 |> List.map (fun (dir, lst) -> 
-                    (dir.ToString() + ": ") :: 
+                    (dir.ToString() + ":") :: 
                     (lst 
                         |> List.sortBy (fun pw -> pw.Coord) 
                         |> List.map (fun pw -> 
                             let r,c = pw.Coord
-                            sprintf "(%d,%d)   %s" r c pw.Hint)))
+                            sprintf "(%d,%d)\t%s" r c pw.Hint)))
                 |> List.concat
             let wordList = String.Join(Environment.NewLine, hintGroups)
 
@@ -236,24 +237,66 @@ module CrosswordCreator
             String.Join(Environment.NewLine, output)
 
     let invertPuzzle (puzzle:Puzzle) :Puzzle =
-        // See this: https://www.fileformat.info/info/unicode/char/25a0/index.htm
-        let blockChar = '\u25a0'
-
         match puzzle with
         | (board, wordCount, words) ->
             let inverseBoard = board |> Array2D.map (fun ltr -> 
-                if ltr = ' ' then blockChar else '\u2610')
+                if ltr = EmptyChar then EmptyChar else BoxChar)
             (inverseBoard, wordCount, words)
 
-    let shrinkPuzzleToSmallest (emptyChar:Char) (puzzle:Puzzle) :Puzzle = puzzle
-        // TODO: Find the number of rows before the content to be removed
-        // TODO: Find the number of rows after the content to be removed
-        // TODO: Find the number of columns before the content to be removed
-        // TODO: Find the number of columns after the content to be removed
-        // TODO: Rewrite all of the PuzzleWord indices so that the words are
-        // still referenced at the correct locations
-        
-        // Use Array2D.init
+    let shrinkPuzzleToSmallest (puzzle:Puzzle) :Puzzle =
+        let getTrueCount seq =
+            seq 
+            |> Seq.takeWhile (fun r -> r = true) 
+            |> Seq.length
+
+        match puzzle with
+        | (board, wordCount, puzzleWords) -> 
+
+            let (b,e) = getBoardBounds board
+
+            let forAllColumnsInRowAreEmpty row =
+                seq { for col in b .. e do yield board.[row,col] }
+                |> Seq.forall (fun c -> c = EmptyChar)
+
+            let forAllRowsInColumnAreEmpty col =
+                seq { for row in b .. e do yield board.[row,col] }
+                |> Seq.forall (fun c -> c = EmptyChar)
+
+            let emptyLeadingRows = 
+                seq { for row in b .. e do yield forAllColumnsInRowAreEmpty row } |> getTrueCount
+
+            // TODO: Resolve bug here
+            let emptyTrailingRows = 
+                seq { for row in e .. b do yield forAllColumnsInRowAreEmpty row } |> getTrueCount
+
+            let emptyLeadingColumns = 
+                seq { for col in b .. e do yield forAllRowsInColumnAreEmpty col } |> getTrueCount
+
+            // TODO: Resolve bug here
+            let emptyTrailingColumns = 
+                seq { for col in e .. b do yield forAllRowsInColumnAreEmpty col } |> getTrueCount
+
+            // Transform indices of puzzle words to match smaller board dimensions
+            let newPuzzleWordList =
+                puzzleWords 
+                |> Seq.map (fun {Word = word; Hint = hint; Coord = (r,c); Dir = dir} -> 
+                    {Word = word; Hint = hint; Coord = (r-emptyLeadingRows, c-emptyLeadingColumns); Dir = dir;}
+                )
+                |> Seq.toList
+            
+            // Create the new board with square dimensions that fit the largest dimension
+            let newBoard =
+                let newRows = e - emptyLeadingRows - emptyTrailingRows
+                let newColumns = e - emptyLeadingColumns - emptyTrailingColumns
+
+                let newSquareDim = if newRows < newColumns then newColumns else newRows
+                let newB = Array2D.create (newSquareDim + 1) (newSquareDim + 1) EmptyChar
+                let srcRow = emptyLeadingRows - 1
+                let srcCol = emptyLeadingColumns - 1
+                Array2D.blit board srcRow srcCol newB 0 0 newRows newColumns
+                newB
+
+            (newBoard, wordCount, newPuzzleWordList)
 
     let rec addWordsToPuzzle (words:InputWords) (puzzle:Puzzle) :seq<Puzzle> =
         seq {
@@ -273,6 +316,6 @@ module CrosswordCreator
         res 
         |> Seq.where (fun (board, wordCount, puzzleWords) -> wordCount = words.Length)
         |> Seq.map (fun (board, wordCount, puzzleWords) -> 
-                shrinkPuzzleToSmallest SpaceChar (board, wordCount, puzzleWords |> List.rev)
+                shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev)
             )
         |> Seq.map invertPuzzle

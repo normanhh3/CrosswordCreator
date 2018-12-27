@@ -40,13 +40,13 @@ let getBinDir =
 [<EntryPoint>]
 let main argv =    
 
-    let filePath = getBinDir +/ "../../../../puzzles/Puzzle.json"
+    let filePath = getBinDir +/ "../../../../puzzles/FamilyTree.json"
     let inputs = getInputFromJson filePath
 
     match inputs with
     | Some(wordList) -> 
         let basePuzzle = createEmptyPuzzle wordList
-        let finalPuzzle = createPuzzles wordList basePuzzle |> Seq.tryHead
+        let finalPuzzle = createPuzzles wordList basePuzzle |> Seq.skip 1 |> Seq.tryHead
         match finalPuzzle with
         | None ->
             printfn "Oops! Unable to create a crossword puzzle with the given inputs!"
