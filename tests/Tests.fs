@@ -168,9 +168,3 @@ let ``shrink board results in a smaller board`` () =
         Assert.Equal(0, minB)
         Assert.Equal(1, maxB)
     |> ignore
-
-[<Fact>]
-let ``reverse sequence expressions work`` () =
-    Assert.Equal(3, seq {7 .. 10 .. 7} |> Seq.length)
-    Assert.Equal(10, seq {10 .. 7} |> Seq.head)
-    Assert.Equal(7, seq {10 .. 7} |> Seq.last)

@@ -267,14 +267,14 @@ module CrosswordCreator
 
             // TODO: Resolve bug here
             let emptyTrailingRows = 
-                seq { for row in e .. b do yield forAllColumnsInRowAreEmpty row } |> getTrueCount
+                seq { for row in e .. -1 .. b do yield forAllColumnsInRowAreEmpty row } |> getTrueCount
 
             let emptyLeadingColumns = 
                 seq { for col in b .. e do yield forAllRowsInColumnAreEmpty col } |> getTrueCount
 
             // TODO: Resolve bug here
             let emptyTrailingColumns = 
-                seq { for col in e .. b do yield forAllRowsInColumnAreEmpty col } |> getTrueCount
+                seq { for col in e .. -1 .. b do yield forAllRowsInColumnAreEmpty col } |> getTrueCount
 
             // Transform indices of puzzle words to match smaller board dimensions
             let newPuzzleWordList =
@@ -318,4 +318,4 @@ module CrosswordCreator
         |> Seq.map (fun (board, wordCount, puzzleWords) -> 
                 shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev)
             )
-        |> Seq.map invertPuzzle
+        //|> Seq.map invertPuzzle
