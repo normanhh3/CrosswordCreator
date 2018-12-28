@@ -243,6 +243,14 @@ module CrosswordCreator
                 if ltr = EmptyChar then EmptyChar else BoxChar)
             (inverseBoard, wordCount, words)
 
+    let forAllColumnsInRowAreEmpty row (board:Board) b e =
+        seq { for col in b .. e do yield board.[row,col] }
+        |> Seq.forall (fun c -> c = EmptyChar)
+
+    let forAllRowsInColumnAreEmpty col (board:Board) b e =
+        seq { for row in b .. e do yield board.[row,col] }
+        |> Seq.forall (fun c -> c = EmptyChar)
+
     let shrinkPuzzleToSmallest (puzzle:Puzzle) :Puzzle =
         let getTrueCount seq =
             seq 
@@ -254,43 +262,34 @@ module CrosswordCreator
 
             let (b,e) = getBoardBounds board
 
-            let forAllColumnsInRowAreEmpty row =
-                seq { for col in b .. e do yield board.[row,col] }
-                |> Seq.forall (fun c -> c = EmptyChar)
-
-            let forAllRowsInColumnAreEmpty col =
-                seq { for row in b .. e do yield board.[row,col] }
-                |> Seq.forall (fun c -> c = EmptyChar)
-
             let emptyLeadingRows = 
-                seq { for row in b .. e do yield forAllColumnsInRowAreEmpty row } |> getTrueCount
+                seq { for row in b .. e do yield forAllColumnsInRowAreEmpty row board b e } |> getTrueCount
 
-            // TODO: Resolve bug here
             let emptyTrailingRows = 
-                seq { for row in e .. -1 .. b do yield forAllColumnsInRowAreEmpty row } |> getTrueCount
+                seq { for row in e .. -1 .. b do yield forAllColumnsInRowAreEmpty row board b e } |> getTrueCount
 
             let emptyLeadingColumns = 
-                seq { for col in b .. e do yield forAllRowsInColumnAreEmpty col } |> getTrueCount
+                seq { for col in b .. e do yield forAllRowsInColumnAreEmpty col board b e } |> getTrueCount
 
-            // TODO: Resolve bug here
             let emptyTrailingColumns = 
-                seq { for col in e .. -1 .. b do yield forAllRowsInColumnAreEmpty col } |> getTrueCount
+                seq { for col in e .. -1 .. b do yield forAllRowsInColumnAreEmpty col board b e } |> getTrueCount
+
+            let newRows = e - emptyLeadingRows - emptyTrailingRows + 1
+            let newColumns = e - emptyLeadingColumns - emptyTrailingColumns + 1
+
+            let newSquareDim = if newRows < newColumns then newColumns else newRows
 
             // Transform indices of puzzle words to match smaller board dimensions
             let newPuzzleWordList =
                 puzzleWords 
                 |> Seq.map (fun {Word = word; Hint = hint; Coord = (r,c); Dir = dir} -> 
-                    {Word = word; Hint = hint; Coord = (r-emptyLeadingRows, c-emptyLeadingColumns); Dir = dir;}
+                    {Word = word; Hint = hint; Coord = (r-newSquareDim, c-newSquareDim); Dir = dir;}
                 )
                 |> Seq.toList
             
             // Create the new board with square dimensions that fit the largest dimension
             let newBoard =
-                let newRows = e - emptyLeadingRows - emptyTrailingRows
-                let newColumns = e - emptyLeadingColumns - emptyTrailingColumns
-
-                let newSquareDim = if newRows < newColumns then newColumns else newRows
-                let newB = Array2D.create (newSquareDim + 1) (newSquareDim + 1) EmptyChar
+                let newB = Array2D.create newSquareDim newSquareDim EmptyChar
                 let srcRow = emptyLeadingRows - 1
                 let srcCol = emptyLeadingColumns - 1
                 Array2D.blit board srcRow srcCol newB 0 0 newRows newColumns
@@ -316,6 +315,5 @@ module CrosswordCreator
         res 
         |> Seq.where (fun (board, wordCount, puzzleWords) -> wordCount = words.Length)
         |> Seq.map (fun (board, wordCount, puzzleWords) -> 
-                shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev)
-            )
+                shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev))
         //|> Seq.map invertPuzzle

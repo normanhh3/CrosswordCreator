@@ -123,6 +123,87 @@ let ``findIntersectingPoints should not return an empty sequence when there are 
 
 open Program
 open CrosswordCreator
+open Xunit
+
+[<Fact>]
+let ``forAllColumnsInRowAreEmpty returns true for all rows and columns in an emmpty board`` () =
+    let (board, wordcount, wordlist) = createEmptyPuzzle [{ Word="One"; Hint="1"}]
+    let (b,e) = getBoardBounds board
+    for rowOrCol in b .. e do
+        Assert.True((forAllColumnsInRowAreEmpty rowOrCol board b e), sprintf "Row %d failed to pass!" rowOrCol)
+        
+        Assert.True((forAllRowsInColumnAreEmpty rowOrCol board b e), sprintf "Column %d failed to pass!" rowOrCol)
+
+[<Fact>]
+let ``forAllColumnsInRowAreEmpty returns true appropriate rows and columns in a board with one word`` () =
+    //waitForDebugger
+    let wl = [{ Word = "One"; Hint = "1" }]
+    let puzzle = createEmptyPuzzle wl
+    let (board, wordCount, wordList) = createPuzzles wl puzzle |> Seq.head
+    Assert.Equal(3, Array2D.length1 board)
+    Assert.Equal(3, Array2D.length2 board)
+
+    // What word(s) were laid out on the board?
+    Assert.Equal("One", (wordList |> Seq.head).Word)
+    Assert.Equal("1", (wordList |> Seq.head).Hint)
+    Assert.Equal((1,0), (wordList |> Seq.head).Coord)
+
+    // Does the board contain the words that were laid out?
+    Assert.Equal('O', board.[1,0])
+    Assert.Equal('n', board.[1,1])
+    Assert.Equal('e', board.[1,2])
+
+    let (b, e) = getBoardBounds board
+
+    Assert.True((forAllColumnsInRowAreEmpty 0 board b e), sprintf "Row %d failed to pass!" 0)
+    Assert.False((forAllColumnsInRowAreEmpty 1 board b e), sprintf "Row %d failed to pass!" 1)
+    Assert.True((forAllColumnsInRowAreEmpty 2 board b e), sprintf "Row %d failed to pass!" 2)
+
+    for c in 0 .. 2 do
+        Assert.False((forAllRowsInColumnAreEmpty c board b e), sprintf "Column %d failed to pass!" c)
+
+    Assert.True(false, "Expected to fail before this point!  The whole board is not empty!")
+
+[<Fact>]
+let ``createPuzzles returns puzzles with smallest possible board size`` () =
+    //waitForDebugger
+    let wl = getInputFromJsonS """
+        [
+            {"Word": "Hello", "Hint": "A greeting"}, 
+            {"Word": "Norman", "Hint": "A name"}, 
+            {"Word": "What", "Hint": "A question about a noun"}, 
+            {"Word": "Road", "Hint": "A transportation path"}, 
+            {"Word": "Shall", "Hint": "Shall?"}, 
+            {"Word": "We", "Hint": "Plural of people"}, 
+            {"Word": "Drive?", "Hint": "Mode of transport"}
+        ]
+    """
+    let basePuzzle = createEmptyPuzzle wl
+    let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
+    match resultingPuzzles with
+    | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
+    | firstPuzzle :: _ -> 
+        printfn "Wahoo! Found at least 1 puzzle that was valid (and %d more)!" resultingPuzzles.Length
+        
+        let (board, wc, wordList) = firstPuzzle
+        
+        let (b,e) = getBoardBounds board
+        Assert.Equal(8, Array2D.length1 board)
+        Assert.Equal(8, Array2D.length2 board)
+
+        let hasLetterD = 
+            seq {
+                for r in b .. e do
+                    for c in b .. e do
+                        yield board.[r,c]
+            } 
+            |> Seq.distinct
+            |> Seq.toList
+            |> Seq.contains 'D'
+        
+        Assert.True(hasLetterD, "Whoops!  We couldn't find the letter D in 'Road' and 'Drive?'! That's bad news!")
+        Assert.True(resultingPuzzles.Length > 1)
+    |> ignore
 
 [<Fact>]
 let ``createPuzzles returns only puzzles with all elements laid out`` () =
@@ -150,7 +231,7 @@ let ``createPuzzles returns only puzzles with all elements laid out`` () =
 
 
 [<Fact>]
-let ``shrink board results in a smaller board`` () =
+let ``shrinkPuzzleToSmallest results in a smaller board`` () =
     //waitForDebugger
     let b1 = getEmptyTestBoard 5
     b1.[3,2] <- 'W'
@@ -168,3 +249,31 @@ let ``shrink board results in a smaller board`` () =
         Assert.Equal(0, minB)
         Assert.Equal(1, maxB)
     |> ignore
+
+[<Fact>]
+let ``shrinkPuzzleToSmallest with more complex board results in a smaller board`` () =
+    //waitForDebugger
+    let wl = getInputFromJsonS """
+        [
+            {"Word": "Hello", "Hint": "A greeting"}, 
+            {"Word": "Norman", "Hint": "A name"}, 
+            {"Word": "What", "Hint": "A question about a noun"}, 
+            {"Word": "Road", "Hint": "A transportation path"}, 
+            {"Word": "Shall", "Hint": "Shall?"}, 
+            {"Word": "We", "Hint": "Plural of people"}, 
+            {"Word": "Drive?", "Hint": "Mode of transport"}
+        ]
+    """
+    let basePuzzle = createEmptyPuzzle wl
+    let (baseBoard, _, _) = basePuzzle
+    let (_, baseE) = getBoardBounds baseBoard
+    let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
+    match resultingPuzzles with
+    | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
+    | _ -> 
+        printfn "Wahoo! Found at least 1 puzzle that was valid (and %d more)!" resultingPuzzles.Length
+        for (board,wordCount,wordList) in resultingPuzzles do
+            //printfn "%s" (puzzleToString p)
+            let (b,e) = getBoardBounds board
+            Assert.True(e < baseE, "Whoops! Expected a smaller board!")
+        Assert.True(resultingPuzzles.Length > 1)
