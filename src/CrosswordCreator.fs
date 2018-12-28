@@ -123,18 +123,13 @@ module CrosswordCreator
 
     let findIntersectingPoints (board:Board) (word:Word) =
         // return a list of valid candidate intersection points
-
-        let wl = word.Length
-
         let (b, e) = getBoardBounds board
-
-        let r = new System.Random()
 
         seq {
             // for every letter in the input word, search the whole array for a fitting spot
-            for i = 0 to wl - 1 do
-                for r = b to e - 1 do
-                    for c = b to e - 1 do
+            for i = 0 to word.Length - 1 do
+                for r = b to e do
+                    for c = b to e do
                         // found intersecting point
                         if toUpper board.[r, c] = toUpper word.[i] then 
                             // is it valid for a horizontal layout?
@@ -277,22 +272,26 @@ module CrosswordCreator
             let newRows = e - emptyLeadingRows - emptyTrailingRows + 1
             let newColumns = e - emptyLeadingColumns - emptyTrailingColumns + 1
 
-            let newSquareDim = if newRows < newColumns then newColumns else newRows
+            let (newSquareDim,leadingRowsOrColumns) = 
+                if newRows < newColumns then 
+                    newColumns,emptyLeadingColumns 
+                else 
+                    newRows,emptyLeadingRows
 
             // Transform indices of puzzle words to match smaller board dimensions
             let newPuzzleWordList =
                 puzzleWords 
                 |> Seq.map (fun {Word = word; Hint = hint; Coord = (r,c); Dir = dir} -> 
-                    {Word = word; Hint = hint; Coord = (r-newSquareDim, c-newSquareDim); Dir = dir;}
+                    {Word = word; Hint = hint; Coord = (r-leadingRowsOrColumns, c-leadingRowsOrColumns); Dir = dir;}
                 )
                 |> Seq.toList
             
             // Create the new board with square dimensions that fit the largest dimension
             let newBoard =
                 let newB = Array2D.create newSquareDim newSquareDim EmptyChar
-                let srcRow = emptyLeadingRows - 1
-                let srcCol = emptyLeadingColumns - 1
-                Array2D.blit board srcRow srcCol newB 0 0 newRows newColumns
+                let srcRow = leadingRowsOrColumns
+                let srcCol = leadingRowsOrColumns
+                Array2D.blit board srcRow srcCol newB 0 0 newSquareDim newSquareDim
                 newB
 
             (newBoard, wordCount, newPuzzleWordList)
@@ -311,8 +310,7 @@ module CrosswordCreator
     // then returns a sequence of puzzles that meet minimum criteria
     let createPuzzles (words:InputWords) (puzzle:Puzzle) :seq<Puzzle> =
         let spaceFixedWords = fixSpacesInWords words |> Seq.toList
-        let res = addWordsToPuzzle spaceFixedWords puzzle
-        res 
+        addWordsToPuzzle spaceFixedWords puzzle
         |> Seq.where (fun (board, wordCount, puzzleWords) -> wordCount = words.Length)
         |> Seq.map (fun (board, wordCount, puzzleWords) -> 
                 shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev))

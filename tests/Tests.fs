@@ -162,8 +162,6 @@ let ``forAllColumnsInRowAreEmpty returns true appropriate rows and columns in a 
     for c in 0 .. 2 do
         Assert.False((forAllRowsInColumnAreEmpty c board b e), sprintf "Column %d failed to pass!" c)
 
-    Assert.True(false, "Expected to fail before this point!  The whole board is not empty!")
-
 [<Fact>]
 let ``createPuzzles returns puzzles with smallest possible board size`` () =
     //waitForDebugger
@@ -233,11 +231,96 @@ let ``createPuzzles returns only puzzles with all elements laid out`` () =
 [<Fact>]
 let ``shrinkPuzzleToSmallest results in a smaller board`` () =
     //waitForDebugger
-    let b1 = getEmptyTestBoard 5
-    b1.[3,2] <- 'W'
-    b1.[3,3] <- 'e'
-    let inputPuzzle = (b1, 1, [ {Word="We"; Hint="We"; Coord=(3,2); Dir=Horizontal} ])
+    let wl = [ {Word="We"; Hint="We";}; {Word="Will"; Hint="Will";}; {Word="Look!"; Hint="Look!";} ]
+    let basePuzzle = createEmptyPuzzle wl
 
+    let puzzleWithWe = 
+        addWordToPuzzle basePuzzle (wl |> List.head) 
+        |> Seq.head
+    
+    // Verify placement of first word on the board
+    match puzzleWithWe with
+    | (brd, wc, wdL) ->
+        Assert.Equal(1, wc)
+        Assert.Equal(1, wdL.Length)
+
+        let (b,e) = getBoardBounds brd
+        Assert.Equal(0, b)
+        Assert.Equal(14, e)
+
+        let word = wdL |> List.head
+        Assert.Equal("We", word.Word)
+        Assert.Equal("We", word.Hint)
+        Assert.Equal((7,6), word.Coord)
+        Assert.Equal(Horizontal, word.Dir)
+
+        Assert.Equal('W', brd.[7,6])
+        Assert.Equal('e', brd.[7,7])
+
+    
+    let puzzleWithWill = 
+        addWordToPuzzle puzzleWithWe (wl |> (List.skip 1) |> List.head)
+        |> Seq.where (fun (_,wc,_) -> wc = 2) 
+        |> Seq.head
+    
+    // Verify placement of second word on the board
+    match puzzleWithWill with
+        | (brd, wc, wdL) ->
+            Assert.Equal(2, wc)
+            Assert.Equal(2, wdL.Length)
+
+            let (b,e) = getBoardBounds brd
+            Assert.Equal(0, b)
+            Assert.Equal(14, e)
+
+            let word = wdL |> List.head
+            Assert.Equal("Will", word.Word)
+            Assert.Equal("Will", word.Hint)
+            Assert.Equal((7,6), word.Coord)
+            Assert.Equal(Vertical, word.Dir)
+
+            Assert.Equal('W', brd.[7,6])
+            Assert.Equal('i', brd.[8,6])
+            Assert.Equal('l', brd.[9,6])
+            Assert.Equal('l', brd.[10,6])
+        |> ignore
+
+    
+    //waitForDebugger
+
+    let look = (wl |> (List.skip 2) |> List.head)
+    let puzzleWithLook = 
+        addWordToPuzzle puzzleWithWill look
+        |> Seq.where (fun (_,wc,_) -> wc = 3)
+        |> Seq.tryHead
+
+    // Verify placement of second word on the board
+    match puzzleWithLook with
+        | None ->
+            Assert.True(false, sprintf "Failed to add the word %s to the base puzzle\r\n %s" look.Word (puzzleToString puzzleWithWill))
+        | Some(brd, wc, wdL) ->
+            Assert.Equal(3, wc)
+            Assert.Equal(3, wdL.Length)
+
+            let (b,e) = getBoardBounds brd
+            Assert.Equal(0, b)
+            Assert.Equal(14, e)
+
+            let word = wdL |> List.head
+            Assert.Equal("Look!", word.Word)
+            Assert.Equal("Look!", word.Hint)
+            Assert.Equal((9,6), word.Coord)
+            Assert.Equal(Horizontal, word.Dir)
+
+            Assert.Equal('L', brd.[9,6])
+            Assert.Equal('o', brd.[9,7])
+            Assert.Equal('o', brd.[9,8])
+            Assert.Equal('k', brd.[9,9])
+            Assert.Equal('!', brd.[9,10])
+        |> ignore
+
+    
+    (*
     let smallPuzzle = shrinkPuzzleToSmallest inputPuzzle
     match smallPuzzle with
     | (smallBoard, wordCount, wordList) ->
@@ -245,10 +328,20 @@ let ``shrinkPuzzleToSmallest results in a smaller board`` () =
         Assert.Equal(2, (Array2D.length1 smallBoard))
         Assert.Equal(2, (Array2D.length2 smallBoard))
 
+        Assert.Equal('W', smallBoard.[0,0])
+        Assert.Equal('e', smallBoard.[0,1])
+
+        let word = wordList |> Seq.head
+
+        Assert.Equal("We", word.Word)
+        Assert.Equal(Horizontal, word.Dir)
+        Assert.Equal((0,0), word.Coord)
+        
         let (minB, maxB) = getBoardBounds smallBoard
         Assert.Equal(0, minB)
         Assert.Equal(1, maxB)
     |> ignore
+    *)
 
 [<Fact>]
 let ``shrinkPuzzleToSmallest with more complex board results in a smaller board`` () =
