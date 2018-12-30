@@ -272,7 +272,7 @@ module CrosswordCreator
 
     let rec addWordsToPuzzle (words:InputWords) (puzzle:Puzzle) :seq<Puzzle> =
         seq {
-            match words with
+            match words with // tried (words |> List.sortByDescending (fun w -> w.Word.Length)) but found out that it breaks a lot of tests
             | [] -> yield puzzle
             | head :: tail -> 
                 for newPuzzle in addWordToPuzzle puzzle head do
@@ -304,7 +304,7 @@ module CrosswordCreator
                         |> List.sortBy (fun pw -> pw.Coord) 
                         |> List.map (fun pw -> 
                             let r,c = pw.Coord
-                            sprintf "(%d,%d)\t%s" r c pw.Hint)))
+                            sprintf "%d. (%d,%d)\t%s" pw.Index r c pw.Hint)))
                 |> List.concat
             let wordList = String.Join(Environment.NewLine, hintGroups)
 
@@ -358,7 +358,7 @@ module CrosswordCreator
                                     let tdStyle = 
                                         """ style="border: 1px solid black; margin: .25em;" """
                                     yield
-                                        if board.[r,c] = BoxChar then
+                                        if board.[r,c] <> EmptyChar then
                                             match words |> Seq.tryFind (fun w -> w.Coord = (r,c)) with
                                             | Some(w) ->
                                                 sprintf """<td%s><input type="text" maxlength="1" size="1" placeholder="%d"></input></td>""" tdStyle w.Index
@@ -376,7 +376,7 @@ module CrosswordCreator
                         |> List.groupBy (fun x -> x.Dir) 
                         |> List.sortBy (fun (dir, list) -> dir)
                         |> List.map (fun (dir, lst) -> 
-                            ("<h2>" + dir.ToString() + "</h2>") :: 
+                            ("<h2>" + (if dir = Horizontal then "Across" else "Down") + "</h2>") :: 
                             (lst 
                                 |> List.sortBy (fun pw -> pw.Index) 
                                 |> List.map (fun pw -> 
@@ -407,4 +407,4 @@ module CrosswordCreator
         |> Seq.where (fun (_, wordCount, _) -> wordCount = words.Length)
         |> Seq.map (fun (board, wordCount, puzzleWords) -> 
                 shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev))
-        |> Seq.map invertPuzzle
+        //|> Seq.map invertPuzzle

@@ -11,6 +11,9 @@ open Microsoft.VisualStudio.TestPlatform.TestHost
 
 // Note: call waitForDebugger from TestHelpers.fs if you want to step into debugging a test
 
+// Todo: Implement a test that shows the existing flaw with laying out a longer word, whose prefix matches an already laid out word!
+// i.e. "Norman III" was laid down after "Norm" in a puzzle resulting in a missing word in the puzzle!
+// Todo: There is an edge case when shrinking the board to the final size results in an index out of range error that we don't have a test for yet
 // Todo: This test code really could stand to have some refactoring done to simplify the code
 // Todo: findIntersectingPoints needs to be more thoroughly tested to ensure that it is returning appropriate matches
 
