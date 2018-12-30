@@ -14,7 +14,7 @@ module CrosswordCreator
     type InputWord = { Word: Word; Hint: string }
     type InputWords = List<InputWord>
 
-    type PuzzleWord = { Word: Word; Hint: string; Coord: BoardCoord; Dir: LayoutDir }
+    type PuzzleWord = { Word: Word; Hint: string; Coord: BoardCoord; Dir: LayoutDir; Index: int }
     type PuzzleWords = List<PuzzleWord>
     (*
         property Tail:  PuzzleWord list
@@ -181,15 +181,16 @@ module CrosswordCreator
                 // add initial word to crossword puzzle
                 let coords = board |> centerWord Horizontal word.Word // get the coordinates for a center placement of the word
                 let newBoard = board |> layoutWordInternal coords Horizontal word.Word
-                let r = [{Word = word.Word; Hint = word.Hint; Coord = coords; Dir = Horizontal}]
+                let r = [{Word = word.Word; Hint = word.Hint; Coord = coords; Dir = Horizontal; Index = wordCount+1}]
                 yield (newBoard, 1, r)
             | (board, wordCount, words) when wordCount > 0 ->
                 let res = findIntersectingPoints board word.Word
 
                 for (coords, dir) in res do
                     let newBoard = board |> layoutWordInternal coords dir word.Word
-                    let wordList = {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir} :: words
+                    let wordList = {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir; Index = wordCount+1} :: words
                     yield (newBoard, wordCount + 1, wordList)
+            | _ -> yield puzzle // this appears necessary to satisfy the compiler that we really have covered all cases
         }
 
     let createEmptyPuzzle (words:InputWords) :Puzzle =
@@ -207,44 +208,6 @@ module CrosswordCreator
                 sb.Append(input.[r, c]) |> ignore
             sb.Append(rowDivider) |> ignore
         sb.ToString()
-
-    let puzzleToString (puzzle:Puzzle) :string =
-        match puzzle with
-        | (board, wordCount, words) ->
-            let nl = Environment.NewLine
-
-            let puzzleHeader = "Puzzle:"
-            let puzzle = 
-                board 
-                |> Array2D.map (fun c -> 
-                    if c = SpaceChar then " " else sprintf "%c" c) 
-                |> joinWith Environment.NewLine
-
-            let wordListHeader = sprintf "Word List (%d):" wordCount
-
-            let hintGroups = 
-                words 
-                |> List.groupBy (fun x -> x.Dir) 
-                |> List.sortBy (fun (dir, list) -> dir) 
-                |> List.map (fun (dir, lst) -> 
-                    (dir.ToString() + ":") :: 
-                    (lst 
-                        |> List.sortBy (fun pw -> pw.Coord) 
-                        |> List.map (fun pw -> 
-                            let r,c = pw.Coord
-                            sprintf "(%d,%d)\t%s" r c pw.Hint)))
-                |> List.concat
-            let wordList = String.Join(Environment.NewLine, hintGroups)
-
-            let output = String.Join(nl + nl, [puzzleHeader; puzzle; wordListHeader; wordList])
-            String.Join(Environment.NewLine, output)
-
-    let invertPuzzle (puzzle:Puzzle) :Puzzle =
-        match puzzle with
-        | (board, wordCount, words) ->
-            let inverseBoard = board |> Array2D.map (fun ltr -> 
-                if ltr = EmptyChar then EmptyChar else BoxChar)
-            (inverseBoard, wordCount, words)
 
     let forAllColumnsInRowAreEmpty row (board:Board) b e =
         seq { for col in b .. e do yield board.[row,col] }
@@ -291,8 +254,9 @@ module CrosswordCreator
             // Transform indices of puzzle words to match smaller board dimensions
             let newPuzzleWordList =
                 puzzleWords 
-                |> Seq.map (fun {Word = word; Hint = hint; Coord = (r,c); Dir = dir} -> 
-                    {Word = word; Hint = hint; Coord = (r-emptyLeadingRows, c-emptyLeadingColumns); Dir = dir;}
+                |> Seq.map (fun pw ->
+                    let (r,c) = pw.Coord
+                    {pw with Coord = (r - emptyLeadingRows, c - emptyLeadingColumns)}
                 )
                 |> Seq.toList
             
@@ -315,13 +279,132 @@ module CrosswordCreator
                     yield! addWordsToPuzzle tail newPuzzle
         }
 
+
+    let puzzleToString (puzzle:Puzzle) :string =
+        match puzzle with
+        | (board, wordCount, words) ->
+            let nl = Environment.NewLine
+
+            let puzzleHeader = "Puzzle:"
+            let puzzle = 
+                board 
+                |> Array2D.map (fun c -> 
+                    if c = SpaceChar then " " else sprintf "%c" c) 
+                |> joinWith Environment.NewLine
+
+            let wordListHeader = sprintf "Word List (%d):" wordCount
+
+            let hintGroups = 
+                words 
+                |> List.groupBy (fun x -> x.Dir) 
+                |> List.sortBy (fun (dir, list) -> dir) 
+                |> List.map (fun (dir, lst) -> 
+                    (dir.ToString() + ":") :: 
+                    (lst 
+                        |> List.sortBy (fun pw -> pw.Coord) 
+                        |> List.map (fun pw -> 
+                            let r,c = pw.Coord
+                            sprintf "(%d,%d)\t%s" r c pw.Hint)))
+                |> List.concat
+            let wordList = String.Join(Environment.NewLine, hintGroups)
+
+            let output = String.Join(nl + nl, [puzzleHeader; puzzle; wordListHeader; wordList])
+            String.Join(Environment.NewLine, output)
+
+    // Todo: Implement smart tabbing through the characters so that tabbing moves through a complete word
+
+    let puzzleToHtml puzzle title =
+        match puzzle with
+        | (board, wordCount, words) ->
+            let (b,e) = getBoardBounds board
+            String.Join(
+                Environment.NewLine,
+                seq {
+                    yield "<html>"
+                    yield "<head>"
+                    yield "<style>"
+                    yield """
+    h1 {
+        text-align: center;
+    }
+    table {
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    div.hint span:first-child {
+        font-weight: bold;
+        margin-right: 1em;
+    }
+    div.hint span:last-child {
+        
+    }
+    td input {
+        border: 0;
+        margin: .5em;
+    }
+                    """
+                    yield "</style>"
+                    yield "</head>"
+                    yield "<body>"
+                    yield sprintf """<h1>%s</h1>""" title
+                    yield """<table id="puzzle">"""
+                    for r in b .. e do
+                        yield "<tr>"
+                        yield String.Join(
+                            String.Empty,
+                            seq {
+                                for c in b .. e do
+                                    let tdStyle = 
+                                        """ style="border: 1px solid black; margin: .25em;" """
+                                    yield
+                                        if board.[r,c] = BoxChar then
+                                            match words |> Seq.tryFind (fun w -> w.Coord = (r,c)) with
+                                            | Some(w) ->
+                                                sprintf """<td%s><input type="text" maxlength="1" size="1" placeholder="%d"></input></td>""" tdStyle w.Index
+                                            | None ->
+                                                sprintf """<td%s><input type="text" maxlength="1" size="1"></input></td>""" tdStyle
+                                        else
+                                            "<td>" + board.[r,c].ToString() + "</td>"
+                            }
+                        )
+                        yield "</tr>"
+                    yield "</table>"
+                    yield "<div>"
+                    let hintGroups = 
+                        words 
+                        |> List.groupBy (fun x -> x.Dir) 
+                        |> List.sortBy (fun (dir, list) -> dir)
+                        |> List.map (fun (dir, lst) -> 
+                            ("<h2>" + dir.ToString() + "</h2>") :: 
+                            (lst 
+                                |> List.sortBy (fun pw -> pw.Index) 
+                                |> List.map (fun pw -> 
+                                    let r,c = pw.Coord
+                                    sprintf """<div class="hint"><span>%d.</span><span>%s</span></div>""" pw.Index pw.Hint)))
+                        |> List.concat
+                    yield String.Join(Environment.NewLine, hintGroups)
+                    yield "</div>"
+                    yield "</body>"
+                    yield "</html>"
+                }
+            )
+
+
+    let invertPuzzle (puzzle:Puzzle) :Puzzle =
+        match puzzle with
+        | (board, wordCount, words) ->
+            let inverseBoard = board |> Array2D.map (fun ltr -> 
+                if ltr = EmptyChar then EmptyChar else BoxChar)
+            (inverseBoard, wordCount, words)
+
     // this method is NOT recursive
     // it takes the master list of words and starting puzzle
     // then returns a sequence of puzzles that meet minimum criteria
     let createPuzzles (words:InputWords) (puzzle:Puzzle) :seq<Puzzle> =
         let spaceFixedWords = fixSpacesInWords words |> Seq.toList
         addWordsToPuzzle spaceFixedWords puzzle
-        |> Seq.where (fun (board, wordCount, puzzleWords) -> wordCount = words.Length)
+        |> Seq.where (fun (_, wordCount, _) -> wordCount = words.Length)
         |> Seq.map (fun (board, wordCount, puzzleWords) -> 
                 shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev))
-        //|> Seq.map invertPuzzle
+        |> Seq.map invertPuzzle

@@ -52,7 +52,7 @@ let main argv =
             printfn "Oops! Unable to create a crossword puzzle with the given inputs!"
             2
         | Some(puzzle) ->
-            printfn "%s" (puzzleToString puzzle) 
+            printfn "%s" (puzzleToHtml puzzle "Harebottle / McSherry Family Tree") 
             0
     | None -> 
         1
