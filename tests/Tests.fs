@@ -11,6 +11,9 @@ open Microsoft.VisualStudio.TestPlatform.TestHost
 
 // Note: call waitForDebugger from TestHelpers.fs if you want to step into debugging a test
 
+// Todo: This test code really could stand to have some refactoring done to simplify the code
+// Todo: findIntersectingPoints needs to be more thoroughly tested to ensure that it is returning appropriate matches
+
 [<Fact>]
 let ``between is inclusive`` () =
     Assert.True(between 9 10 9)
@@ -120,8 +123,6 @@ let ``findIntersectingPoints should not return an empty sequence when there are 
         let points = findIntersectingPoints b "World"
         Assert.False (Seq.isEmpty points)
         Assert.Equal(3, (Seq.length points))
-
-// TODO: findIntersectingPoints needs to be more thoroughly tested to ensure that it is returning appropriate matches
 
 open Program
 open CrosswordCreator
@@ -249,8 +250,8 @@ let ``createPuzzles returns only puzzles with all elements laid out`` () =
     let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
     match resultingPuzzles with
     | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
-    | _ -> 
-        printfn "Wahoo! Found at least 1 puzzle that was valid (and %d more)!" resultingPuzzles.Length
+    | _ ->
+        // Todo: Re-use this block of test code in all other appropriate tests 
         for p in resultingPuzzles do
             let (_, _, wlP) = p
             let uniqueLettersInPuzzle = getUniqueCharsFromPuzzleWords wlP
@@ -356,29 +357,6 @@ let ``shrinkPuzzleToSmallest results in a smaller board`` () =
             Assert.Equal('k', brd.[9,9])
             Assert.Equal('!', brd.[9,10])
         |> ignore
-    
-    (*
-    let smallPuzzle = shrinkPuzzleToSmallest inputPuzzle
-    match smallPuzzle with
-    | (smallBoard, wordCount, wordList) ->
-
-        Assert.Equal(2, (Array2D.length1 smallBoard))
-        Assert.Equal(2, (Array2D.length2 smallBoard))
-
-        Assert.Equal('W', smallBoard.[0,0])
-        Assert.Equal('e', smallBoard.[0,1])
-
-        let word = wordList |> Seq.head
-
-        Assert.Equal("We", word.Word)
-        Assert.Equal(Horizontal, word.Dir)
-        Assert.Equal((0,0), word.Coord)
-        
-        let (minB, maxB) = getBoardBounds smallBoard
-        Assert.Equal(0, minB)
-        Assert.Equal(1, maxB)
-    |> ignore
-    *)
 
 [<Fact>]
 let ``shrinkPuzzleToSmallest with more complex board results in a smaller board`` () =
@@ -401,9 +379,7 @@ let ``shrinkPuzzleToSmallest with more complex board results in a smaller board`
     match resultingPuzzles with
     | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
     | _ -> 
-        printfn "Wahoo! Found at least 1 puzzle that was valid (and %d more)!" resultingPuzzles.Length
-        for (board,wordCount,wordList) in resultingPuzzles do
-            //printfn "%s" (puzzleToString p)
-            let (b,e) = getBoardBounds board
+        for (board,_,_) in resultingPuzzles do
+            let (_,e) = getBoardBounds board
             Assert.True(e < baseE, "Whoops! Expected a smaller board!")
         Assert.True(resultingPuzzles.Length > 1)
