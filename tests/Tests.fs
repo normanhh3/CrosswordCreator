@@ -1,6 +1,8 @@
 module Tests
 
 open System
+open System.Linq
+open System.Collections.Generic
 open Xunit
 open CrosswordCreator
 
@@ -146,17 +148,17 @@ let ``forAllColumnsInRowAreEmpty returns true appropriate rows and columns in a 
     // What word(s) were laid out on the board?
     Assert.Equal("One", (wordList |> Seq.head).Word)
     Assert.Equal("1", (wordList |> Seq.head).Hint)
-    Assert.Equal((1,0), (wordList |> Seq.head).Coord)
+    Assert.Equal((0,0), (wordList |> Seq.head).Coord)
 
     // Does the board contain the words that were laid out?
-    Assert.Equal('O', board.[1,0])
-    Assert.Equal('n', board.[1,1])
-    Assert.Equal('e', board.[1,2])
+    Assert.Equal('O', board.[0,0])
+    Assert.Equal('n', board.[0,1])
+    Assert.Equal('e', board.[0,2])
 
     let (b, e) = getBoardBounds board
 
-    Assert.True((forAllColumnsInRowAreEmpty 0 board b e), sprintf "Row %d failed to pass!" 0)
-    Assert.False((forAllColumnsInRowAreEmpty 1 board b e), sprintf "Row %d failed to pass!" 1)
+    Assert.False((forAllColumnsInRowAreEmpty 0 board b e), sprintf "Row %d failed to pass!" 0)
+    Assert.True((forAllColumnsInRowAreEmpty 1 board b e), sprintf "Row %d failed to pass!" 1)
     Assert.True((forAllColumnsInRowAreEmpty 2 board b e), sprintf "Row %d failed to pass!" 2)
 
     for c in 0 .. 2 do
@@ -203,6 +205,28 @@ let ``createPuzzles returns puzzles with smallest possible board size`` () =
         Assert.True(resultingPuzzles.Length > 1)
     |> ignore
 
+// NOTE: The following two method implementations exist because I can't polymorphically access the Word field
+// of two different record types in F#
+// See: https://fslang.uservoice.com/forums/245727-f-language/suggestions/9633858-structural-extensible-records-like-elm-concrete
+
+
+let getUniqueCharsFromInputWords (wl:InputWords) =
+    new String(
+        wl
+        |> Seq.map (fun w -> w.Word.ToLowerInvariant()) 
+        |> Seq.collect (fun ltrs -> ltrs.ToCharArray())
+        |> Seq.sort
+        |> Seq.toArray)
+
+let getUniqueCharsFromPuzzleWords (pw:PuzzleWords) =
+    new String(
+        pw
+        |> Seq.map (fun w -> w.Word.ToLowerInvariant()) 
+        |> Seq.collect (fun ltrs -> ltrs.ToCharArray())
+        |> Seq.sort
+        |> Seq.toArray)
+       
+
 [<Fact>]
 let ``createPuzzles returns only puzzles with all elements laid out`` () =
     //waitForDebugger
@@ -218,13 +242,27 @@ let ``createPuzzles returns only puzzles with all elements laid out`` () =
         ]
     """
     let basePuzzle = createEmptyPuzzle wl
+
+    let uniqueLettersInWL = getUniqueCharsFromInputWords wl
+    let wlS = new String(uniqueLettersInWL.ToArray())
+
     let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
     match resultingPuzzles with
     | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
     | _ -> 
         printfn "Wahoo! Found at least 1 puzzle that was valid (and %d more)!" resultingPuzzles.Length
         for p in resultingPuzzles do
-            printfn "%s" (puzzleToString p)
+            let (_, _, wlP) = p
+            let uniqueLettersInPuzzle = getUniqueCharsFromPuzzleWords wlP
+            let r = uniqueLettersInWL = uniqueLettersInPuzzle
+            if not r then
+                printfn "The following puzzle doesn't appear to have all of the input words laid out properly!"
+                
+                printfn "Input letters:  '%s'" uniqueLettersInWL
+                printfn "Puzzle letters: '%s'" uniqueLettersInPuzzle
+                printfn "%s" (puzzleToString p)
+                Assert.True(false)
+            
         Assert.True(resultingPuzzles.Length > 1)
 
 
@@ -234,6 +272,7 @@ let ``shrinkPuzzleToSmallest results in a smaller board`` () =
     let wl = [ {Word="We"; Hint="We";}; {Word="Will"; Hint="Will";}; {Word="Look!"; Hint="Look!";} ]
     let basePuzzle = createEmptyPuzzle wl
 
+    // Add first word to the board
     let puzzleWithWe = 
         addWordToPuzzle basePuzzle (wl |> List.head) 
         |> Seq.head
@@ -258,6 +297,7 @@ let ``shrinkPuzzleToSmallest results in a smaller board`` () =
         Assert.Equal('e', brd.[7,7])
 
     
+    // Add second word on the board
     let puzzleWithWill = 
         addWordToPuzzle puzzleWithWe (wl |> (List.skip 1) |> List.head)
         |> Seq.where (fun (_,wc,_) -> wc = 2) 
@@ -285,16 +325,14 @@ let ``shrinkPuzzleToSmallest results in a smaller board`` () =
             Assert.Equal('l', brd.[10,6])
         |> ignore
 
-    
-    //waitForDebugger
-
+    // Add third word to the board
     let look = (wl |> (List.skip 2) |> List.head)
     let puzzleWithLook = 
         addWordToPuzzle puzzleWithWill look
         |> Seq.where (fun (_,wc,_) -> wc = 3)
         |> Seq.tryHead
 
-    // Verify placement of second word on the board
+    // Verify placement of third word on the board
     match puzzleWithLook with
         | None ->
             Assert.True(false, sprintf "Failed to add the word %s to the base puzzle\r\n %s" look.Word (puzzleToString puzzleWithWill))
@@ -318,7 +356,6 @@ let ``shrinkPuzzleToSmallest results in a smaller board`` () =
             Assert.Equal('k', brd.[9,9])
             Assert.Equal('!', brd.[9,10])
         |> ignore
-
     
     (*
     let smallPuzzle = shrinkPuzzleToSmallest inputPuzzle

@@ -16,6 +16,14 @@ module CrosswordCreator
 
     type PuzzleWord = { Word: Word; Hint: string; Coord: BoardCoord; Dir: LayoutDir }
     type PuzzleWords = List<PuzzleWord>
+    (*
+        property Tail:  PuzzleWord list
+        property Length:  int
+        property Item:  PuzzleWord
+        property IsEmpty:  bool
+        property Head:  PuzzleWord
+        static property Empty:  PuzzleWord list
+    *)
 
     type Puzzle = Board * WordCount * PuzzleWords
 
@@ -269,28 +277,30 @@ module CrosswordCreator
             let emptyTrailingColumns = 
                 seq { for col in e .. -1 .. b do yield forAllRowsInColumnAreEmpty col board b e } |> getTrueCount
 
+            // TODO: Something about this block of code is causing the issue with the one failing test
+            // We are taking too many
             let newRows = e - emptyLeadingRows - emptyTrailingRows + 1
             let newColumns = e - emptyLeadingColumns - emptyTrailingColumns + 1
 
-            let (newSquareDim,leadingRowsOrColumns) = 
+            let newSquareDim = 
                 if newRows < newColumns then 
-                    newColumns,emptyLeadingColumns 
+                    newColumns 
                 else 
-                    newRows,emptyLeadingRows
+                    newRows
 
             // Transform indices of puzzle words to match smaller board dimensions
             let newPuzzleWordList =
                 puzzleWords 
                 |> Seq.map (fun {Word = word; Hint = hint; Coord = (r,c); Dir = dir} -> 
-                    {Word = word; Hint = hint; Coord = (r-leadingRowsOrColumns, c-leadingRowsOrColumns); Dir = dir;}
+                    {Word = word; Hint = hint; Coord = (r-emptyLeadingRows, c-emptyLeadingColumns); Dir = dir;}
                 )
                 |> Seq.toList
             
             // Create the new board with square dimensions that fit the largest dimension
             let newBoard =
                 let newB = Array2D.create newSquareDim newSquareDim EmptyChar
-                let srcRow = leadingRowsOrColumns
-                let srcCol = leadingRowsOrColumns
+                let srcRow = emptyLeadingRows
+                let srcCol = emptyLeadingColumns
                 Array2D.blit board srcRow srcCol newB 0 0 newSquareDim newSquareDim
                 newB
 
