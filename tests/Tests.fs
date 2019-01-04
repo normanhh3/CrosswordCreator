@@ -386,3 +386,64 @@ let ``shrinkPuzzleToSmallest with more complex board results in a smaller board`
             let (_,e) = getBoardBounds board
             Assert.True(e < baseE, "Whoops! Expected a smaller board!")
         Assert.True(resultingPuzzles.Length > 1)
+
+[<Fact>]
+let ``shrinkPuzzleToSmallest with larger scale board``() =
+    let wl = getInputFromJsonS """
+    [
+        { "Word": "Arity", "Hint": "Arity" },
+        { "Word": "Higher-Order Functions (HOF)", "Hint": "Higher-Order Functions (HOF)" },
+        { "Word": "Closure", "Hint":"" },
+        { "Word": "Partial Application", "Hint":"" },
+        { "Word": "Currying", "Hint":"" },
+        { "Word": "Auto Currying", "Hint":"" },
+        { "Word": "Function Composition", "Hint":"" },
+        { "Word": "Continuation", "Hint":"" },
+        { "Word": "Purity", "Hint":"" },
+        { "Word": "Side effects", "Hint":"" },
+        { "Word": "Idempotent", "Hint":"" },
+        { "Word": "Point-Free Style", "Hint":"" },
+        { "Word": "Predicate", "Hint":"" },
+        { "Word": "Contracts", "Hint":"" },
+        { "Word": "Category", "Hint":"" },
+        { "Word": "Value", "Hint":"" },
+        { "Word": "Constant", "Hint":"" },
+        { "Word": "Functor", "Hint":"" },
+        { "Word": "Pointed Functor", "Hint":"" },
+        { "Word": "Lift", "Hint":"" },
+        { "Word": "Referential Transparency", "Hint":"" },
+        { "Word": "Equational Reasoning", "Hint":"" },
+        { "Word": "Lambda", "Hint":"" },
+        { "Word": "Lambda Calculus", "Hint":"" },
+        { "Word": "Lazy evaluation", "Hint":"" },
+        { "Word": "Monoid", "Hint":"" },
+        { "Word": "Monad", "Hint":"" },
+        { "Word": "Comonad", "Hint":"" },
+        { "Word": "Applicative Functor", "Hint":"" },
+        { "Word": "Morphism", "Hint":"" },
+        { "Word": "Endomorphism", "Hint":"" },
+        { "Word": "Isomorphism", "Hint":"" },
+        { "Word": "Setoid", "Hint":"" },
+        { "Word": "Semigroup", "Hint":"" },
+        { "Word": "Foldable", "Hint":"" },
+        { "Word": "Lens", "Hint":"" },
+        { "Word": "Type Signatures", "Hint":"" },
+        { "Word": "Algebraic data type", "Hint":"" },
+        { "Word": "Sum type", "Hint":"" },
+        { "Word": "Product type", "Hint":"" },
+        { "Word": "Option", "Hint":"" },
+        { "Word": "Function", "Hint":"" },
+        { "Word": "Partial function", "Hint":"" }
+    ]
+    """
+    let basePuzzle = createEmptyPuzzle wl
+    let (baseBoard, _, _) = basePuzzle
+    let (_, baseE) = getBoardBounds baseBoard
+    let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
+    match resultingPuzzles with
+    | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
+    | _ -> 
+        for (board,_,_) in resultingPuzzles do
+            let (_,e) = getBoardBounds board
+            Assert.True(e < baseE, "Whoops! Expected a smaller board!")
+        Assert.True(resultingPuzzles.Length > 1)
