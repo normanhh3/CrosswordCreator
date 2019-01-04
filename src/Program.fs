@@ -1,11 +1,12 @@
 ﻿module Program
 
+open Argu
 open CrosswordCreator
 open FSharp.Data
 open System.IO
 
 type PuzzleJson = JsonProvider<""" [{ "Word": "California", "Hint": "Biggest west coast state"}] """>
-    
+
 let getInputFromJsonS (json:string) :InputWords =
     let jsonS = json
     (PuzzleJson.Parse jsonS)
