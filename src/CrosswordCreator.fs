@@ -1,8 +1,9 @@
 module CrosswordCreator
 
-    open System    
+    open System
     open System.Text
     open System.Globalization
+    open ExtraTopLevelOperators
 
     type BoardCoord = int * int
     type Word = string
@@ -261,11 +262,10 @@ module CrosswordCreator
                 |> Seq.toList
             
             // Create the new board with square dimensions that fit the largest dimension
+            
             let newBoard =
                 let newB = Array2D.create newSquareDim newSquareDim EmptyChar
-                let srcRow = emptyLeadingRows
-                let srcCol = emptyLeadingColumns
-                Array2D.blit board srcRow srcCol newB 0 0 newSquareDim newSquareDim
+                Array2D.blit board emptyLeadingRows emptyLeadingColumns newB 0 0 newSquareDim newSquareDim
                 newB
 
             (newBoard, wordCount, newPuzzleWordList)
@@ -317,6 +317,8 @@ module CrosswordCreator
         match puzzle with
         | (board, wordCount, words) ->
             let (b,e) = getBoardBounds board
+
+            let wordsByCoords = dict [ for w in words -> (w.Coord, w) ]
             String.Join(
                 Environment.NewLine,
                 seq {
@@ -331,6 +333,9 @@ module CrosswordCreator
         text-align: center;
         margin-left: auto;
         margin-right: auto;
+    }
+    div.hint {
+        margin-left: 1.5em;
     }
     div.hint span:first-child {
         font-weight: bold;
@@ -357,15 +362,18 @@ module CrosswordCreator
                                 for c in b .. e do
                                     let tdStyle = 
                                         """ style="border: 1px solid black; margin: .25em;" """
+                                    let cellVal = board.[r,c]
                                     yield
-                                        if board.[r,c] <> EmptyChar then
-                                            match words |> Seq.tryFind (fun w -> w.Coord = (r,c)) with
-                                            | Some(w) ->
+                                        if cellVal <> EmptyChar then
+                                            let key = (r,c)   
+
+                                            if wordsByCoords.ContainsKey key then
+                                                let w = wordsByCoords.[key]
                                                 sprintf """<td%s><input type="text" maxlength="1" size="1" placeholder="%d"></input></td>""" tdStyle w.Index
-                                            | None ->
+                                            else
                                                 sprintf """<td%s><input type="text" maxlength="1" size="1"></input></td>""" tdStyle
                                         else
-                                            "<td>" + board.[r,c].ToString() + "</td>"
+                                            "<td>" + cellVal.ToString() + "</td>"
                             }
                         )
                         yield "</tr>"
