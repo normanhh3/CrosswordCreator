@@ -36,8 +36,6 @@ let getBinDir =
 
 // TODO: Make case-sensitive matching an optional parameter
 
-// TODO: Add post-processing step to shrink the 2d board down to minimum
-
 [<EntryPoint>]
 let main argv =    
 

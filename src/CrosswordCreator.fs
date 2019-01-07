@@ -17,15 +17,7 @@ module CrosswordCreator
 
     type PuzzleWord = { Word: Word; Hint: string; Coord: BoardCoord; Dir: LayoutDir; Index: int }
     type PuzzleWords = List<PuzzleWord>
-    (*
-        property Tail:  PuzzleWord list
-        property Length:  int
-        property Item:  PuzzleWord
-        property IsEmpty:  bool
-        property Head:  PuzzleWord
-        static property Empty:  PuzzleWord list
-    *)
-
+    
     type Puzzle = Board * WordCount * PuzzleWords
 
     type Rank = int
@@ -310,8 +302,6 @@ module CrosswordCreator
 
             let output = String.Join(nl + nl, [puzzleHeader; puzzle; wordListHeader; wordList])
             String.Join(Environment.NewLine, output)
-
-    // Todo: Implement smart tabbing through the characters so that tabbing moves through a complete word
 
     let puzzleToHtml puzzle title =
         match puzzle with
