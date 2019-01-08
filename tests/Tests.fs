@@ -145,28 +145,33 @@ let ``forAllColumnsInRowAreEmpty returns true appropriate rows and columns in a 
     //waitForDebugger
     let wl = [{ Word = "One"; Hint = "1" }]
     let puzzle = createEmptyPuzzle wl
-    let (board, wordCount, wordList) = createPuzzles wl puzzle |> Seq.head
-    Assert.Equal(3, Array2D.length1 board)
-    Assert.Equal(3, Array2D.length2 board)
+    let res = createPuzzles wl puzzle
 
-    // What word(s) were laid out on the board?
-    Assert.Equal("One", (wordList |> Seq.head).Word)
-    Assert.Equal("1", (wordList |> Seq.head).Hint)
-    Assert.Equal((0,0), (wordList |> Seq.head).Coord)
+    match res with
+    | Error err -> Assert.True(false, err)
+    | Ok r ->
+        let (board, wordCount, wordList) = r |> Seq.head
+        Assert.Equal(3, Array2D.length1 board)
+        Assert.Equal(3, Array2D.length2 board)
 
-    // Does the board contain the words that were laid out?
-    Assert.Equal('O', board.[0,0])
-    Assert.Equal('n', board.[0,1])
-    Assert.Equal('e', board.[0,2])
+        // What word(s) were laid out on the board?
+        Assert.Equal("One", (wordList |> Seq.head).Word)
+        Assert.Equal("1", (wordList |> Seq.head).Hint)
+        Assert.Equal((0,0), (wordList |> Seq.head).Coord)
 
-    let (b, e) = getBoardBounds board
+        // Does the board contain the words that were laid out?
+        Assert.Equal('O', board.[0,0])
+        Assert.Equal('n', board.[0,1])
+        Assert.Equal('e', board.[0,2])
 
-    Assert.False((forAllColumnsInRowAreEmpty 0 board b e), sprintf "Row %d failed to pass!" 0)
-    Assert.True((forAllColumnsInRowAreEmpty 1 board b e), sprintf "Row %d failed to pass!" 1)
-    Assert.True((forAllColumnsInRowAreEmpty 2 board b e), sprintf "Row %d failed to pass!" 2)
+        let (b, e) = getBoardBounds board
 
-    for c in 0 .. 2 do
-        Assert.False((forAllRowsInColumnAreEmpty c board b e), sprintf "Column %d failed to pass!" c)
+        Assert.False((forAllColumnsInRowAreEmpty 0 board b e), sprintf "Row %d failed to pass!" 0)
+        Assert.True((forAllColumnsInRowAreEmpty 1 board b e), sprintf "Row %d failed to pass!" 1)
+        Assert.True((forAllColumnsInRowAreEmpty 2 board b e), sprintf "Row %d failed to pass!" 2)
+
+        for c in 0 .. 2 do
+            Assert.False((forAllRowsInColumnAreEmpty c board b e), sprintf "Column %d failed to pass!" c)
 
 [<Fact>]
 let ``createPuzzles returns puzzles with smallest possible board size`` () =
@@ -183,31 +188,36 @@ let ``createPuzzles returns puzzles with smallest possible board size`` () =
         ]
     """
     let basePuzzle = createEmptyPuzzle wl
-    let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
-    match resultingPuzzles with
-    | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
-    | firstPuzzle :: _ -> 
-        printfn "Wahoo! Found at least 1 puzzle that was valid (and %d more)!" resultingPuzzles.Length
-        
-        let (board, wc, wordList) = firstPuzzle
-        
-        let (b,e) = getBoardBounds board
-        Assert.Equal(8, Array2D.length1 board)
-        Assert.Equal(8, Array2D.length2 board)
+    let res = createPuzzles wl basePuzzle
 
-        let hasLetterD = 
-            seq {
-                for r in b .. e do
-                    for c in b .. e do
-                        yield board.[r,c]
-            } 
-            |> Seq.distinct
-            |> Seq.toList
-            |> Seq.contains 'D'
-        
-        Assert.True(hasLetterD, "Whoops!  We couldn't find the letter D in 'Road' and 'Drive?'! That's bad news!")
-        Assert.True(resultingPuzzles.Length > 1)
-    |> ignore
+    match res with
+    | Error err -> Assert.True(false, err)
+    | Ok r ->
+        let resultingPuzzles = r |> Seq.toList
+        match resultingPuzzles with
+        | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
+        | firstPuzzle :: _ -> 
+            printfn "Wahoo! Found at least 1 puzzle that was valid (and %d more)!" resultingPuzzles.Length
+            
+            let (board, wc, wordList) = firstPuzzle
+            
+            let (b,e) = getBoardBounds board
+            Assert.Equal(8, Array2D.length1 board)
+            Assert.Equal(8, Array2D.length2 board)
+
+            let hasLetterD = 
+                seq {
+                    for r in b .. e do
+                        for c in b .. e do
+                            yield board.[r,c]
+                } 
+                |> Seq.distinct
+                |> Seq.toList
+                |> Seq.contains 'D'
+            
+            Assert.True(hasLetterD, "Whoops!  We couldn't find the letter D in 'Road' and 'Drive?'! That's bad news!")
+            Assert.True(resultingPuzzles.Length > 1)
+        |> ignore
 
 // NOTE: The following two method implementations exist because I can't polymorphically access the Word field
 // of two different record types in F#
@@ -250,24 +260,27 @@ let ``createPuzzles returns only puzzles with all elements laid out`` () =
     let uniqueLettersInWL = getUniqueCharsFromInputWords wl
     let wlS = new String(uniqueLettersInWL.ToArray())
 
-    let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
-    match resultingPuzzles with
-    | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
-    | _ ->
-        // Todo: Re-use this block of test code in all other appropriate tests 
-        for p in resultingPuzzles do
-            let (_, _, wlP) = p
-            let uniqueLettersInPuzzle = getUniqueCharsFromPuzzleWords wlP
-            let r = uniqueLettersInWL = uniqueLettersInPuzzle
-            if not r then
-                printfn "The following puzzle doesn't appear to have all of the input words laid out properly!"
+    let res = createPuzzles wl basePuzzle 
+    match res with
+    | Error err -> Assert.True(false, err)
+    | Ok r ->
+        match r |> Seq.toList with
+        | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
+        | items ->
+            // Todo: Re-use this block of test code in all other appropriate tests 
+            for p in r do
+                let (_, _, wlP) = p
+                let uniqueLettersInPuzzle = getUniqueCharsFromPuzzleWords wlP
+                let r = uniqueLettersInWL = uniqueLettersInPuzzle
+                if not r then
+                    printfn "The following puzzle doesn't appear to have all of the input words laid out properly!"
+                    
+                    printfn "Input letters:  '%s'" uniqueLettersInWL
+                    printfn "Puzzle letters: '%s'" uniqueLettersInPuzzle
+                    printfn "%s" (puzzleToString p)
+                    Assert.True(false)
                 
-                printfn "Input letters:  '%s'" uniqueLettersInWL
-                printfn "Puzzle letters: '%s'" uniqueLettersInPuzzle
-                printfn "%s" (puzzleToString p)
-                Assert.True(false)
-            
-        Assert.True(resultingPuzzles.Length > 1)
+            Assert.True(items.Length > 1)
 
 
 [<Fact>]
@@ -378,72 +391,42 @@ let ``shrinkPuzzleToSmallest with more complex board results in a smaller board`
     let basePuzzle = createEmptyPuzzle wl
     let (baseBoard, _, _) = basePuzzle
     let (_, baseE) = getBoardBounds baseBoard
-    let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
-    match resultingPuzzles with
-    | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
-    | _ -> 
-        for (board,_,_) in resultingPuzzles do
-            let (_,e) = getBoardBounds board
-            Assert.True(e < baseE, "Whoops! Expected a smaller board!")
-        Assert.True(resultingPuzzles.Length > 1)
+    let res = createPuzzles wl basePuzzle 
+    match res with
+    | Error err -> Assert.True(false, err)
+    | Ok r ->
+        match r |> Seq.toList with
+        | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
+        | items -> 
+            for (board,_,_) in r do
+                let (_,e) = getBoardBounds board
+                Assert.True(e < baseE, sprintf "Whoops! Expected a smaller board but found one of size %d" e)
+            Assert.True(items.Length > 1)
 
 [<Fact>]
 let ``shrinkPuzzleToSmallest with larger scale board``() =
+    //waitForDebugger
     let wl = getInputFromJsonS """
     [
         { "Word": "Arity", "Hint": "Arity" },
         { "Word": "Higher-Order Functions (HOF)", "Hint": "Higher-Order Functions (HOF)" },
-        { "Word": "Closure", "Hint":"" },
-        { "Word": "Partial Application", "Hint":"" },
-        { "Word": "Currying", "Hint":"" },
-        { "Word": "Auto Currying", "Hint":"" },
-        { "Word": "Function Composition", "Hint":"" },
-        { "Word": "Continuation", "Hint":"" },
-        { "Word": "Purity", "Hint":"" },
-        { "Word": "Side effects", "Hint":"" },
-        { "Word": "Idempotent", "Hint":"" },
-        { "Word": "Point-Free Style", "Hint":"" },
-        { "Word": "Predicate", "Hint":"" },
-        { "Word": "Contracts", "Hint":"" },
-        { "Word": "Category", "Hint":"" },
-        { "Word": "Value", "Hint":"" },
-        { "Word": "Constant", "Hint":"" },
-        { "Word": "Functor", "Hint":"" },
-        { "Word": "Pointed Functor", "Hint":"" },
-        { "Word": "Lift", "Hint":"" },
-        { "Word": "Referential Transparency", "Hint":"" },
-        { "Word": "Equational Reasoning", "Hint":"" },
-        { "Word": "Lambda", "Hint":"" },
-        { "Word": "Lambda Calculus", "Hint":"" },
-        { "Word": "Lazy evaluation", "Hint":"" },
-        { "Word": "Monoid", "Hint":"" },
-        { "Word": "Monad", "Hint":"" },
-        { "Word": "Comonad", "Hint":"" },
-        { "Word": "Applicative Functor", "Hint":"" },
-        { "Word": "Morphism", "Hint":"" },
-        { "Word": "Endomorphism", "Hint":"" },
-        { "Word": "Isomorphism", "Hint":"" },
-        { "Word": "Setoid", "Hint":"" },
-        { "Word": "Semigroup", "Hint":"" },
-        { "Word": "Foldable", "Hint":"" },
-        { "Word": "Lens", "Hint":"" },
-        { "Word": "Type Signatures", "Hint":"" },
-        { "Word": "Algebraic data type", "Hint":"" },
-        { "Word": "Sum type", "Hint":"" },
-        { "Word": "Product type", "Hint":"" },
-        { "Word": "Option", "Hint":"" },
-        { "Word": "Function", "Hint":"" },
-        { "Word": "Partial function", "Hint":"" }
+        { "Word": "Closure", "Hint":"Closure" },
+        { "Word": "Partial Application", "Hint":"Partial Application" },
+        { "Word": "Currying", "Hint":"Currying" },
+        { "Word": "Auto Currying", "Hint":"Auto Currying" }
     ]
     """
     let basePuzzle = createEmptyPuzzle wl
     let (baseBoard, _, _) = basePuzzle
     let (_, baseE) = getBoardBounds baseBoard
-    let resultingPuzzles = createPuzzles wl basePuzzle |> Seq.toList
-    match resultingPuzzles with
-    | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
-    | _ -> 
-        for (board,_,_) in resultingPuzzles do
-            let (_,e) = getBoardBounds board
-            Assert.True(e < baseE, "Whoops! Expected a smaller board!")
-        Assert.True(resultingPuzzles.Length > 1)
+    let res = createPuzzles wl basePuzzle 
+    match res with
+    | Error err -> Assert.True(false, err)
+    | Ok r ->
+        match r |> Seq.toList with
+        | [] -> Assert.True(false, "Whoops! No puzzles generated had all of the elements laid out!")
+        | items -> 
+            for (board,_,_) in r do
+                let (_,e) = getBoardBounds board
+                Assert.True(e < baseE, sprintf "Whoops! Expected a smaller board but found one of size %d" e)
+            Assert.True(items.Length > 1)

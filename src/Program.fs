@@ -46,22 +46,12 @@ let main argv =
     match inputs with
     | Some(wordList) -> 
 
-        let invalidWords = 
-            wordList 
-            |> Seq.where (fun w -> System.String.IsNullOrEmpty(w.Word) || System.String.IsNullOrEmpty(w.Hint))
-            |> Seq.toList
-
-        if not(List.isEmpty invalidWords) then
-            printfn "Oops! Unable to create a crossword puzzle with the given word list!"
-            printfn "Reason: Either a word or a hint was invalid!"
-            3
-        else
-            let basePuzzle = createEmptyPuzzle wordList
-            let finalPuzzle = createPuzzles wordList basePuzzle |> Seq.tryHead
-            //|> Seq.skip 1 
-            
-
-            match finalPuzzle with
+        let basePuzzle = createEmptyPuzzle wordList
+        let finalPuzzle = createPuzzles wordList basePuzzle
+        //|> Seq.skip 1 
+        match finalPuzzle with
+        | Ok p ->        
+            match p |> Seq.tryHead with
             | None ->
                 printfn "Oops! Unable to create a crossword puzzle with the given inputs!"
                 2
@@ -70,5 +60,9 @@ let main argv =
                     //(puzzleToString puzzle)
                     (puzzleToHtml puzzle "Harebottle / McSherry Family Tree") 
                 0
+        | Error reason -> 
+            printfn "Oops! Something unexpected happened while trying to create your puzzle!"
+            printfn "Reason: %s" reason
+            3
     | None -> 
         1

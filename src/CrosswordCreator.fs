@@ -181,7 +181,13 @@ module CrosswordCreator
 
                 for (coords, dir) in res do
                     let newBoard = board |> layoutWordInternal coords dir word.Word
-                    let wordList = {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir; Index = wordCount+1} :: words
+                    let idx = words |> Seq.tryFind (fun w -> w.Coord = coords && w.Dir <> dir)
+                    let wordList = 
+                        match idx with
+                        | Some(sharedItem) ->
+                            {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir; Index = sharedItem.Index} :: words
+                        | None ->
+                            {Word = word.Word; Hint = word.Hint; Coord = coords; Dir = dir; Index = wordCount+1} :: words
                     yield (newBoard, wordCount + 1, wordList)
             | _ -> yield puzzle // this appears necessary to satisfy the compiler that we really have covered all cases
         }
@@ -257,7 +263,7 @@ module CrosswordCreator
             
             let newBoard =
                 let newB = Array2D.create newSquareDim newSquareDim EmptyChar
-                Array2D.blit board emptyLeadingRows emptyLeadingColumns newB 0 0 newSquareDim newSquareDim
+                Array2D.blit board emptyLeadingRows emptyLeadingColumns newB 0 0 newRows newColumns
                 newB
 
             (newBoard, wordCount, newPuzzleWordList)
@@ -399,10 +405,22 @@ module CrosswordCreator
     // this method is NOT recursive
     // it takes the master list of words and starting puzzle
     // then returns a sequence of puzzles that meet minimum criteria
-    let createPuzzles (words:InputWords) (puzzle:Puzzle) :seq<Puzzle> =
-        let spaceFixedWords = fixSpacesInWords words |> Seq.toList
-        addWordsToPuzzle spaceFixedWords puzzle
-        |> Seq.where (fun (_, wordCount, _) -> wordCount = words.Length)
-        |> Seq.map (fun (board, wordCount, puzzleWords) -> 
-                shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev))
-        //|> Seq.map invertPuzzle
+    let createPuzzles (words:InputWords) (puzzle:Puzzle) =
+        let invalidWords = 
+            words 
+            |> Seq.where (fun w -> System.String.IsNullOrEmpty(w.Word) || System.String.IsNullOrEmpty(w.Hint))
+            |> Seq.toList
+
+        if not(List.isEmpty invalidWords) then
+            Error "Either a word or a hint was invalid!"
+        else
+            let spaceFixedWords = fixSpacesInWords words |> Seq.toList
+            
+            let res = 
+                addWordsToPuzzle spaceFixedWords puzzle
+                |> Seq.where (fun (_, wordCount, _) -> wordCount = words.Length)
+                |> Seq.map (fun (board, wordCount, puzzleWords) -> 
+                        shrinkPuzzleToSmallest (board, wordCount, puzzleWords |> List.rev))
+            //|> Seq.map invertPuzzle
+
+            Ok res
