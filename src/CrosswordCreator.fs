@@ -239,8 +239,6 @@ module CrosswordCreator
             let emptyTrailingColumns = 
                 seq { for col in e .. -1 .. b do yield forAllRowsInColumnAreEmpty col board b e } |> getTrueCount
 
-            // TODO: Something about this block of code is causing the issue with the one failing test
-            // We are taking too many
             let newRows = e - emptyLeadingRows - emptyTrailingRows + 1
             let newColumns = e - emptyLeadingColumns - emptyTrailingColumns + 1
 
