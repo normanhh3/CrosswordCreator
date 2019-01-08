@@ -4,6 +4,7 @@ open Argu
 open CrosswordCreator
 open FSharp.Data
 open System.IO
+open System.Linq
 
 type PuzzleJson = JsonProvider<""" [{ "Word": "California", "Hint": "Biggest west coast state"}] """>
 
@@ -44,16 +45,30 @@ let main argv =
 
     match inputs with
     | Some(wordList) -> 
-        let basePuzzle = createEmptyPuzzle wordList
-        let finalPuzzle = createPuzzles wordList basePuzzle |> Seq.skip 1 |> Seq.tryHead
-        match finalPuzzle with
-        | None ->
-            printfn "Oops! Unable to create a crossword puzzle with the given inputs!"
-            2
-        | Some(puzzle) ->
-            printfn "%s" 
-                //(puzzleToString puzzle)
-                (puzzleToHtml puzzle "Harebottle / McSherry Family Tree") 
-            0
+
+        let invalidWords = 
+            wordList 
+            |> Seq.where (fun w -> System.String.IsNullOrEmpty(w.Word) || System.String.IsNullOrEmpty(w.Hint))
+            |> Seq.toList
+
+        if not(List.isEmpty invalidWords) then
+            printfn "Oops! Unable to create a crossword puzzle with the given word list!"
+            printfn "Reason: Either a word or a hint was invalid!"
+            3
+        else
+            let basePuzzle = createEmptyPuzzle wordList
+            let finalPuzzle = createPuzzles wordList basePuzzle |> Seq.tryHead
+            //|> Seq.skip 1 
+            
+
+            match finalPuzzle with
+            | None ->
+                printfn "Oops! Unable to create a crossword puzzle with the given inputs!"
+                2
+            | Some(puzzle) ->
+                printfn "%s" 
+                    //(puzzleToString puzzle)
+                    (puzzleToHtml puzzle "Harebottle / McSherry Family Tree") 
+                0
     | None -> 
         1
