@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "tests", "tests\tests.fsproj", "{3B493E20-5613-446B-97B4-9E7EC41ABC80}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CrosswordCreatorTests", "tests\CrosswordCreatorTests.fsproj", "{3B493E20-5613-446B-97B4-9E7EC41ABC80}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "src", "src\src.fsproj", "{81CC6E30-2020-498E-84E7-11DA0EBA809D}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CrosswordCreator", "src\CrosswordCreator.fsproj", "{81CC6E30-2020-498E-84E7-11DA0EBA809D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

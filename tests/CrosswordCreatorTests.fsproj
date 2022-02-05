@@ -1,9 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
+    <!-- <PublishTrimmed>true</PublishTrimmed> -->
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\src.fsproj" />
+    <ProjectReference Include="..\src\CrosswordCreator.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="TestHelpers.fs" />
